@@ -58,3 +58,29 @@ test('every export embeds the category artwork and official wordmark',()=>{
     }
   }
 });
+
+test('responsive carton layout switches at the correct aspect ratios',async()=>{
+  const {getLayoutProfile}=await import('../src/artwork.js');
+  assert.equal(getLayoutProfile(83,23),'wide');
+  assert.equal(getLayoutProfile(32,32),'square');
+  assert.equal(getLayoutProfile(46,46),'square');
+  assert.equal(getLayoutProfile(43,26),'landscape');
+  assert.equal(getLayoutProfile(24,14),'compact');
+});
+test('wide SI15C uses expanded design on front and back consistently',()=>{
+  const flat=createFlatSvg(PRESETS.SI15C);
+  const faces=createViewsSvg(PRESETS.SI15C);
+  for(const svg of [flat,faces]){
+    assert.match(svg,/data-layout="wide"/);
+    assert.match(svg,/data-layout="wide-back"/);
+    assert.match(svg,/href="#pic-rod"/);
+    assert.doesNotMatch(markup(svg),/NaN|undefined/);
+  }
+});
+test('square packages retain existing art templates',()=>{
+  for(const preset of [PRESETS.GE17C,PRESETS['S6004-2RS']]){
+    const flat=createFlatSvg(preset);
+    assert.match(flat,/data-layout="square"/);
+    assert.match(flat,/href="#back-panel"/);
+  }
+});
