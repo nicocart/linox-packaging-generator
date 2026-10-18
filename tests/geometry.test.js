@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import {PRESETS, normalizeInput, createDieline} from '../src/geometry.js';
 import {createFlatSvg,createViewsSvg,createIsoSvg} from '../src/artwork.js';
 
+// Embedded base64 images/fonts may contain "NaN" by chance; check markup only.
+const markup=svg=>svg.replace(/data:[^"')]+/g,'');
+
 test('packaging dimensions reflect preset input',()=>{
   for(const item of Object.values(PRESETS)){
     const d=createDieline(item);
@@ -20,7 +23,7 @@ test('SVG exports contain cut/fold groups and mm units',()=>{
   const svg=createFlatSvg(PRESETS.GE17C);
   assert.match(svg,/id="cut"/); assert.match(svg,/id="crease"/);
   assert.match(svg,/mm"/); assert.match(svg,/GE17C/);
-  assert.doesNotMatch(svg,/NaN/);
+  assert.doesNotMatch(markup(svg),/NaN/);
 });
 test('front, back and side views are generated for SI15C',()=>{
   const svg=createViewsSvg(PRESETS.SI15C);
@@ -34,7 +37,7 @@ test('presentation board renders every preset without invalid numbers',async()=>
   const {createPresentationSvg}=await import('../src/presentation.js');
   for(const item of Object.values(PRESETS)){
     const svg=createPresentationSvg(item);
-    assert.doesNotMatch(svg,/NaN|undefined/);
+    assert.doesNotMatch(markup(svg),/NaN|undefined/);
     assert(svg.includes(item.model));
     for(const d of [item.length,item.width,item.depth]) assert(svg.includes(`${d} mm`));
   }
@@ -48,7 +51,7 @@ test('every export embeds the category artwork and official wordmark',()=>{
   for(const item of Object.values(PRESETS)){
     for(const make of [createFlatSvg,createViewsSvg,createIsoSvg]){
       const svg=make(item);
-      assert.doesNotMatch(svg,/NaN|undefined/);
+      assert.doesNotMatch(markup(svg),/NaN|undefined/);
       assert.match(svg,/id="pic-\w+"[^>]*><image href="data:image\/png;base64,/);
       assert.match(svg,/id="back-panel"/);
       assert.match(svg,/fill="#e60012"/);

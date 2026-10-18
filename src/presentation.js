@@ -4,20 +4,18 @@ import { artDefs, createFlatSvg, productArtworkForPreview, previewFaceArtwork } 
 /*
  * Presentation board in the layout of the approved reference sheets: front,
  * back and side faces plus an opened carton on a grey stage, and the printed
- * dieline below. Faces and dieline use one fixed display proportion so every
- * SKU reads the same way; the dimension labels carry the real millimetres.
- * The exact-unit production die is exported separately by createFlatSvg().
+ * dieline below. Every face, the opened carton and the dieline are drawn in
+ * the carton's real L : W : H proportion, each scaled to fit its region.
  */
 const v=n=>Number(n.toFixed(2));
 const esc=s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
-const FONT=`font-family="'Segoe UI','Noto Sans',Arial,sans-serif"`;
+const FONT=`font-family="Barlow,'Segoe UI',Arial,sans-serif"`;
 const label=(x,y,s,{size=20,color='#2a2a2a',anchor='middle',weight='400',extra=''}={})=>`<text x="${v(x)}" y="${v(y)}" fill="${color}" ${FONT} font-size="${size}" font-weight="${weight}" text-anchor="${anchor}" ${extra}>${esc(s)}</text>`;
 
 const PAGE_W=1448, PAGE_H=1086, STAGE_H=520;
-// Display faces in reference proportion: front/back 424 × 263, side 105 × 263.
-const FACE={ w:415, h:258, side:103 };
-// Template carton in mm with the same L:W:H as the display faces.
-const TEMPLATE={ length:84.8, width:52.6, depth:21 };
+// Stage regions in page px: closed faces on the left, opened carton on the right.
+const FACES={ left:70, right:1030, mid:322, maxH:270, gap:26 };
+const OPEN={ left:1062, right:1428, bottom:500, maxH:430 };
 
 /** Closed carton face with a sliver of the top panel and a contact shadow. */
 function face(x,y,w,h,config,kind){
@@ -49,60 +47,72 @@ function dimV(x,y1,y2,boxLeft,txt){
 }
 
 /**
- * Opened carton seen from the front-right, lid hinged at the back and raised,
- * product lying in a poly bag. Real 3D points projected to the page.
+ * Opened carton lying on its back, seen from the front-right: footprint L × W,
+ * walls H high, the L × W lid hinged at the back and raised, as on the
+ * reference sheets. Product lies in a poly bag.
+ * Real 3D points are projected, then scaled to fit the OPEN region.
  */
-function openCarton(ox,oy,config){
-  const L=285, D=175, H=96;
+function openCarton(config){
   const ex=[.97,.085], ey=[.3,-.74];
+  const phi=100*Math.PI/180, dir=[-Math.cos(phi),Math.sin(phi)], tuckDir=[-Math.sin(phi),-Math.cos(phi)];
+  const L0=config.length, D0=config.width, H0=config.depth, T0=Math.min(D0*.3,H0*.9);
+  // Fit: bounding box of every corner at unit scale.
+  const raw=(x,y,z)=>[x*ex[0]+y*ey[0], x*ex[1]+y*ey[1]-z];
+  const lidY=D0+dir[0]*D0, lidZ=H0+dir[1]*D0;
+  const corners=[[0,0,0],[L0,0,0],[L0,D0,0],[0,0,H0],[L0,D0,H0],[0,lidY,lidZ],[L0,lidY,lidZ],[L0,lidY+tuckDir[0]*T0,lidZ+tuckDir[1]*T0],[0,lidY+tuckDir[0]*T0,lidZ+tuckDir[1]*T0]].map(p=>raw(...p));
+  const xs=corners.map(p=>p[0]), ys=corners.map(p=>p[1]);
+  const bw=Math.max(...xs)-Math.min(...xs), bh=Math.max(...ys)-Math.min(...ys);
+  const k=Math.min((OPEN.right-OPEN.left)/bw, OPEN.maxH/bh);
+  const ox=(OPEN.left+OPEN.right)/2-k*(Math.max(...xs)+Math.min(...xs))/2, oy=OPEN.bottom-k*Math.max(...ys);
+  const L=L0*k, D=D0*k, H=H0*k, T=T0*k, u=Math.min(L,D*1.6)/285; // u: decoration scale
   const P=(x,y,z)=>[ox+x*ex[0]+y*ey[0], oy+x*ex[1]+y*ey[1]-z];
   const poly=(pts,attrs)=>`<path d="M${pts.map(p=>p.map(v).join(',')).join('L')}Z" ${attrs}/>`;
-  const phi=100*Math.PI/180, dir=[0,-Math.cos(phi),Math.sin(phi)], tuckDir=[0,-Math.sin(phi),-Math.cos(phi)];
-  const tip=(x,k=D)=>P(x,D+dir[1]*k,H+dir[2]*k);
-  const T=30;
-  const tuck=x=>P(x,D+dir[1]*D+tuckDir[1]*T,H+dir[2]*D+tuckDir[2]*T);
+  const tip=x=>P(x,D+dir[0]*D,H+dir[1]*D);
+  const tuck=x=>P(x,D+dir[0]*D+tuckDir[0]*T,H+dir[1]*D+tuckDir[1]*T);
+  const inset=Math.min(8,L*.03);
   const lid=poly([P(0,D,H),P(L,D,H),tip(L),tip(0)],'fill="url(#lidGrad)" stroke="#a9aaad" stroke-width="1.2" stroke-linejoin="round"');
-  const lidTuck=poly([tip(0),tip(L),tuck(L-8),tuck(8)],'fill="#f3f3f3" stroke="#a9aaad" stroke-width="1.1" stroke-linejoin="round"');
+  const lidTuck=poly([tip(0),tip(L),tuck(L-inset),tuck(inset)],'fill="#f3f3f3" stroke="#a9aaad" stroke-width="1.1" stroke-linejoin="round"');
   const back=poly([P(0,D,0),P(L,D,0),P(L,D,H),P(0,D,H)],'fill="#dcdcdd"');
   const left=poly([P(0,0,0),P(0,D,0),P(0,D,H),P(0,0,H)],'fill="#cfd0d2"');
   const floor=poly([P(0,0,0),P(L,0,0),P(L,D,0),P(0,D,0)],'fill="#e6e6e7"');
   const front=poly([P(0,0,0),P(L,0,0),P(L,0,H),P(0,0,H)],'fill="url(#wallFront)" stroke="#a5a6a9" stroke-width="1.2" stroke-linejoin="round"');
   const right=poly([P(L,0,0),P(L,D,0),P(L,D,H),P(L,0,H)],'fill="url(#wallSide)" stroke="#a5a6a9" stroke-width="1.2" stroke-linejoin="round"');
   const rim=`<path d="M${P(0,0,H).map(v)}L${P(L,0,H).map(v)}L${P(L,D,H).map(v)}" fill="none" stroke="#fff" stroke-width="2.4"/>`;
-  // Poly bag occupying most of the floor, with crinkle highlights.
-  const [bx,by]=P(L*.06,D*.9,H*.55), [cx,cy]=P(L*.5,D*.55,H*.95);
-  const bagPath=`M${v(bx)},${v(by)}L${P(L*.95,D*.92,H*.55).map(v)}L${P(L*.97,D*.12,H*.85).map(v)}L${P(L*.04,D*.08,H*.85).map(v)}Z`;
+  // Poly bag filling the opening, with crinkle highlights.
+  const [cx,cy]=P(L*.5,D*.5,H*.95);
+  const bagPath=`M${P(L*.05,D*.92,H*.6).map(v)}L${P(L*.95,D*.94,H*.6).map(v)}L${P(L*.97,D*.1,H*.9).map(v)}L${P(L*.04,D*.06,H*.9).map(v)}Z`;
   const bag=`<clipPath id="bagClip"><path d="${bagPath}"/></clipPath><path d="${bagPath}" fill="url(#bagGrad)" stroke="#c4c6c9" stroke-width="1.4" stroke-linejoin="round"/>`;
-  const crinkle=`<g fill="none" stroke="#fff" stroke-linecap="round" opacity=".8" clip-path="url(#bagClip)">
-    <path d="M${v(cx-130)},${v(cy-38)}q30,-14 60,-4t70,-6" stroke-width="2.6"/>
-    <path d="M${v(cx-125)},${v(cy+48)}q40,10 80,-2t90,6" stroke-width="2.2"/>
-    <path d="M${v(cx+95)},${v(cy-70)}q-10,30 4,56t-8,52" stroke-width="2"/>
-    <path d="M${v(cx-118)},${v(cy-10)}q14,20 2,40" stroke-width="1.8"/>
-    <path d="M${v(cx-60)},${v(cy-62)}l40,8l50,-6l40,10" stroke-width="1.4" stroke="#b9bbbf" opacity=".6"/></g>`;
-  const pw=205, ph=pw*.75;
-  const product=`<g transform="translate(${v(cx-pw/2-6)} ${v(cy-ph/2+4)})">${productArtworkForPreview(config.category,pw,ph,{shaded:true})}</g>`;
+  const crinkle=`<g fill="none" stroke="#fff" stroke-linecap="round" opacity=".8" clip-path="url(#bagClip)" transform="translate(${v(cx)} ${v(cy)}) scale(${v(u)})">
+    <path d="M-130,-38q30,-14 60,-4t70,-6" stroke-width="2.6"/>
+    <path d="M-125,48q40,10 80,-2t90,6" stroke-width="2.2"/>
+    <path d="M95,-70q-10,30 4,56t-8,52" stroke-width="2"/>
+    <path d="M-118,-10q14,20 2,40" stroke-width="1.8"/></g>`;
+  // Product fitted to the opening; the front wall overlaps its lower part.
+  const pw=L*.8, ph=Math.min(pw*.75,D*.74+H*.9);
+  const product=`<g transform="translate(${v(cx-pw/2)} ${v(cy-ph/2)})">${productArtworkForPreview(config.category,pw,ph,{shaded:true})}</g>`;
   const film=`<path d="${bagPath}" fill="url(#filmGrad)"/>`;
-  const shadow=`<ellipse cx="${v(P(L*.55,D*.3,0)[0])}" cy="${v(P(L*.5,0,0)[1]+12)}" rx="${v(L*.62)}" ry="16" fill="#1d1f22" opacity=".2" filter="url(#blur6)"/>`;
+  const shadow=`<ellipse cx="${v(P(L*.55,D*.3,0)[0])}" cy="${v(P(L*.5,0,0)[1]+10)}" rx="${v(L*.6)}" ry="14" fill="#1d1f22" opacity=".2" filter="url(#blur6)"/>`;
   return `<g>${shadow}${lid}${lidTuck}${back}${left}${floor}${bag}${product}${film}${crinkle}${front}${right}${rim}</g>`;
 }
 
 export function createPresentationSvg(raw){
   const c=normalizeInput(raw);
-  const {w:fw,h:fh,side:sw}=FACE;
-  const gap=26, frontX=62, backX=frontX+fw+gap, sideX=backX+fw+gap, faceY=196;
+  // One px-per-mm scale for all three faces, so they keep the real L : W : H.
+  const k=Math.min((FACES.right-FACES.left-2*FACES.gap)/(2*c.length+c.depth), FACES.maxH/c.width);
+  const fw=c.length*k, fh=c.width*k, sw=c.depth*k;
+  const frontX=FACES.left+(FACES.right-FACES.left-2*FACES.gap-2*fw-sw)/2;
+  const backX=frontX+fw+FACES.gap, sideX=backX+fw+FACES.gap, faceY=FACES.mid-fh/2;
   const stage=`<rect width="${PAGE_W}" height="${STAGE_H}" fill="url(#stageGrad)"/>
   ${face(frontX,faceY,fw,fh,c,'front')}
   ${face(backX,faceY,fw,fh,c,'back')}
   ${face(sideX,faceY,sw,fh,c,'side')}
-  ${dimH(frontX,frontX+fw,166,faceY,`${c.length} mm`)}
-  ${dimH(sideX,sideX+sw,166,faceY,`${c.depth} mm`)}
-  ${dimV(34,faceY,faceY+fh,frontX,`${c.width} mm`)}
-  ${openCarton(1078,492,c)}`;
+  ${dimH(frontX,frontX+fw,faceY-30,faceY,`${c.length} mm`)}
+  ${dimH(sideX,sideX+sw,faceY-30,faceY,`${c.depth} mm`)}
+  ${dimV(frontX-26,faceY,faceY+fh,frontX,`${c.width} mm`)}
+  ${openCarton(c)}`;
 
-  // Printed dieline at display proportion, generated by the same geometry
-  // and artwork code as the production export.
-  const tpl={...raw,...TEMPLATE,mode:'box'};
-  const flat=createFlatSvg(tpl,{withDimensions:false,style:'presentation'});
+  // Printed dieline from the same geometry and artwork code as the production export.
+  const flat=createFlatSvg(raw,{withDimensions:false,style:'presentation'});
   const vb=flat.match(/viewBox="([^"]+)"/)[1].split(' ').map(Number);
   const inner=flat.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'').replace(/<title>[\s\S]*?<\/title>/,'').replace(/<desc>[\s\S]*?<\/desc>/,'').replace(/<defs>[\s\S]*?<\/defs>/,'');
   const areaW=PAGE_W-80, areaH=PAGE_H-STAGE_H-40;
@@ -110,7 +120,7 @@ export function createPresentationSvg(raw){
   const dx=(PAGE_W-vb[2]*scale)/2, dy=STAGE_H+(areaH-vb[3]*scale)/2+8;
   const die=`<rect y="${STAGE_H}" width="${PAGE_W}" height="${PAGE_H-STAGE_H}" fill="#fff"/>
   <g transform="translate(${v(dx)} ${v(dy)}) scale(${v(scale)}) translate(${-vb[0]} ${-vb[1]})">${inner}</g>
-  ${label(PAGE_W-24,PAGE_H-16,'示意比例 · 生产请导出精确毫米刀模 SVG',{size:12,color:'#b3b3b3',anchor:'end'})}`;
+  ${label(PAGE_W-24,PAGE_H-16,'真实比例 · 生产请导出精确毫米刀模 SVG',{size:12,color:'#b3b3b3',anchor:'end'})}`;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${PAGE_W}" height="${PAGE_H}" viewBox="0 0 ${PAGE_W} ${PAGE_H}" role="img" aria-label="${esc(c.model)} 包装效果与刀模综合预览">
   <defs>

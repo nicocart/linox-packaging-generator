@@ -1,5 +1,5 @@
 import { createDieline, CATEGORY, normalizeInput } from './geometry.js';
-import { ASSETS } from './assets.js';
+import { ASSETS, FONT_FACES } from './assets.js';
 
 /** SVG is entirely procedural. No AI/image assets or external font/network dependencies. */
 const esc = value => String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&apos;');
@@ -16,7 +16,7 @@ const text = (x,y,str,fs,other='') => `<text x="${n(x)}" y="${n(y)}" font-size="
 const symbol=(id,{width,height,href})=>`<symbol id="${id}" viewBox="0 0 ${width} ${height}"><image href="${href}" width="${width}" height="${height}"/></symbol>`;
 export function artDefs(category) {
   const key=CATEGORY[category].illustration;
-  return `<defs>${symbol(`pic-${key}`,ASSETS[key])}${symbol('back-panel',ASSETS['back-panel'])}
+  return `<defs><style>${FONT_FACES}</style>${symbol(`pic-${key}`,ASSETS[key])}${symbol('back-panel',ASSETS['back-panel'])}
 <filter id="metalTone" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".74 0 0 0 .02  0 .76 0 0 .02  0 0 .79 0 .03  0 0 0 1 0"/></filter></defs>`;
 }
 
@@ -32,7 +32,7 @@ const WORDMARK_PATH = 'M9.2148 7.5742H26.4414V42.3125H66.9648V59.5352H9.2148Z'
   + 'M279.0469 48.7188L289.7266 59.5352H315.0703L291.7109 36.0547Z';
 const WORDMARK_BOX = { x: 9.2148, y: 7.5742, w: 305.871, h: 51.961 };
 const LINOX_RED = '#e60012';
-const FONT = `font-family="Bahnschrift,'DIN Alternate','Roboto Condensed','Arial Narrow',Arial,sans-serif"`;
+const FONT = `font-family="Barlow,'Segoe UI',Arial,sans-serif"`;
 
 /** LINOX wordmark at (x,y) top-left, `w` wide. ® sits outside `w`, top right. */
 export function logo(x,y,w,{color=LINOX_RED,registered=true}={}) {
@@ -80,9 +80,17 @@ function frontArtwork(config,x,y,w,h) {
     lines.forEach((t,i)=>out+=text(X(22),Y(192+i*24),t,17.5*s,`${FONT} fill="#1d1d1d"`));
     return `<g>${out}</g>`;
   }
-  const s=Math.min(w/424,h/263), oy=y+(h-263*s)/2, X=v=>x+v*s, Y=v=>oy+v*s;
-  const artW=218*s, artH=artW*.75;
-  out+=productPic(config.category,x+w-artW-10*s,Y(86),artW,artH);
+  // Flat panels (wider than ~2.2 : 1) drop the top margin so the stack fills
+  // the height, and centre the drawing in the space right of the text.
+  const flat=w/h>2.2;
+  const s=flat?h/232:Math.min(w/424,h/263), oy=flat?y-30*s:y+(h-263*s)/2, X=v=>x+v*s, Y=v=>oy+v*s;
+  if (flat) {
+    const artH=h*.9, artW=artH/.75, left=X(330), right=x+w-8*s;
+    out+=productPic(config.category,left+Math.max(0,(right-left-artW)/2),y+h*.05,artW,artH);
+  } else {
+    const artW=218*s;
+    out+=productPic(config.category,x+w-artW-10*s,Y(86),artW,artW*.75);
+  }
   out+=logo(X(32),Y(48),262*s);
   out+=rule(X(32),Y(115),X(160),1.5*s);
   out+=text(X(32),Y(178),config.model,fitFont(config.model,50*s,Math.max(185*s,w-300*s)),`${FONT} font-weight="600" fill="#151515"`);
@@ -94,7 +102,7 @@ function frontArtwork(config,x,y,w,h) {
 /** Back panel: the supplied brand block, centred (reference unit box 379 × 263). */
 function backArtwork(config,x,y,w,h){
   const {width,height}=ASSETS['back-panel'];
-  const bw=Math.min(w*.74,h*.7*width/height), bh=bw*height/width;
+  const bw=Math.min(w*.88,h*.86*width/height), bh=bw*height/width;
   return `<use href="#back-panel" x="${n(x+(w-bw)/2)}" y="${n(y+(h-bh)/2)}" width="${n(bw)}" height="${n(bh)}"/>`;
 }
 
@@ -196,7 +204,7 @@ export function createIsoSvg(raw) {
   <g fill="#e6e6e6" stroke="#999" stroke-width=".28">${poly([[x+L,y],[x+L+dx,y+dy],[x+L+dx,y+W+dy],[x+L,y+W]])}</g>
   <g fill="white" stroke="#888" stroke-width=".28">${rect(x,y,L,W)}</g>
   ${front}${side}${frontGuide}${vertGuide}
-  ${text(x+L+dx*.5,y+W*.5+dy*.5,`${H} mm`,Math.max(1.8,Math.min(3,H*.2)),'fill="#555" font-family="Arial,sans-serif" text-anchor="middle"')}
+  ${text(x+L+dx*.5+2,y+dy*.5-2,`${H} mm`,Math.max(1.8,Math.min(3,H*.2)),'fill="#555" font-family="Arial,sans-serif" text-anchor="start"')}
   </svg>`;
 }
 
