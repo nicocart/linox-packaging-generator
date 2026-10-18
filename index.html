@@ -49,7 +49,7 @@
       <div class="brand-rule"><span class="rule-dot red"></span><span><strong>LINOX 视觉标准</strong><small>红黑配色 / 中英混合排版</small></span><span class="mini-label">固定</span></div>
       <div class="brand-rule"><span class="rule-dot slate"></span><span><strong>产品分类线稿</strong><small>每个分类复用一张 SVG</small></span><span class="mini-label">固定</span></div>
       <div class="brand-rule"><span class="rule-dot cyan"></span><span><strong>标准双插舌盒</strong><small>尺寸驱动 / 裁切 & 压痕</small></span><span class="mini-label">参数化</span></div>
-      <div class="sidebar-bottom"><div class="status-pulse"></div><div>LOCAL PROCESSING <small>数据仅在浏览器中处理</small></div><span class="version">v0.1</span></div>
+      <div class="sidebar-bottom"><div class="status-pulse"></div><div>LOCAL PROCESSING <small>数据仅在浏览器中处理</small></div><span class="version">v0.2</span></div>
     </aside>
 
     <main class="workspace">
@@ -61,9 +61,9 @@
           <div class="summary-card"><div>盒型</div><strong>Reverse Tuck End</strong><small>反向插舌 · 概念模板</small></div>
         </div>
         <div class="preview-card">
-          <div class="preview-header"><div><span class="eyebrow">LIVE PREVIEW</span><h2>设计实时预览</h2></div><div class="tabs" role="tablist" aria-label="预览模式"><button class="tab active" data-tab="views" type="button" role="tab" aria-selected="true">包装三视图</button><button class="tab" data-tab="flat" type="button" role="tab" aria-selected="false">刀模展开图</button><button class="tab" data-tab="iso" type="button" role="tab" aria-selected="false">3D 盒型示意</button></div></div>
+          <div class="preview-header"><div><span class="eyebrow">LIVE PREVIEW</span><h2>包装视觉与刀模实时预览</h2></div><div class="tabs" role="tablist" aria-label="预览模式"><button class="tab active" data-tab="flat" type="button" role="tab" aria-selected="true">刀模展开图 · 默认</button><button class="tab" data-tab="views" type="button" role="tab" aria-selected="false">印刷三视图</button><button class="tab" data-tab="iso" type="button" role="tab" aria-selected="false">3D 盒型示意</button></div></div>
           <div class="preview-viewport"><div class="viewport-top"><span class="viewport-label"><span class="live-dot"></span> SVG VECTOR PREVIEW</span><span id="scale-note">精确毫米矢量绘制</span></div><div id="drawing" aria-live="polite"></div><div class="viewport-bottom"><span>◉ 白卡双插舌结构</span><span id="drawing-caption">前 / 后 / 侧面</span></div></div>
-          <div class="preview-footer"><div class="legend"><span><i class="legend-line cut"></i>裁切 CUT</span><span><i class="legend-line crease"></i>压痕 FOLD</span><span><i class="legend-line ink"></i>印刷 INK</span></div><div class="download-buttons"><button type="button" class="light-btn" id="download-views">↓ 三视图 SVG</button><button type="button" class="accent-btn" id="download-flat">↓ 刀模 SVG</button></div></div>
+          <div class="preview-footer"><div class="legend"><span><i class="legend-line cut"></i>裁切 CUT</span><span><i class="legend-line crease"></i>压痕 FOLD</span><span><i class="legend-line ink"></i>印刷 INK</span></div><div class="download-buttons"><button type="button" class="light-btn" id="download-presentation">↓ 效果展示 SVG</button><button type="button" class="light-btn" id="download-views">↓ 三视图 SVG</button><button type="button" class="accent-btn" id="download-flat">↓ 刀模 SVG</button></div></div>
         </div>
         <section class="notice-section"><div class="notice-heading"><span>↗</span><div><h3>生产前校核</h3><p>所有结构均为可计算的矢量概念稿，印前仍需供应商确认。</p></div></div><ul id="warnings"></ul></section>
         <section class="help-card"><div><span class="eyebrow">WORKFLOW</span><h3>从型号到包装，三步完成。</h3><p>输入尺寸和型号 → 选择预览 → 导出可编辑 SVG。下载的毫米 SVG 文件保留独立的裁切、压痕、图案分组。</p></div><div class="help-links"><button id="load-json" type="button">↑ 导入 JSON</button><input id="json-file" type="file" accept="application/json,.json" hidden/><a href="./README.md" target="_blank" rel="noopener">查看技术说明 ↗</a></div></section>
