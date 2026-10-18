@@ -184,3 +184,13 @@ export function createIsoSvg(raw) {
   ${text(x+L+dx*.5,y+W*.5+dy*.5,`${H} mm`,Math.max(1.8,Math.min(3,H*.2)),'fill="#555" font-family="Arial,sans-serif" text-anchor="middle"')}
   </svg>`;
 }
+
+export function previewFaceArtwork(config,kind,w,h) {
+ const pseudo={...config};
+ if(kind==='front')return frontArtwork(pseudo,0,0,w,h);
+ if(kind==='back')return backArtwork(pseudo,0,0,w,h);
+ return sideArtwork(pseudo,0,0,w,h);
+}
+export function productArtworkForPreview(category,w,h) {
+ return productPic(category,0,0,w,h);
+}
