@@ -30,3 +30,17 @@ test('invalid sizing is rejected',()=>{
   assert.throws(()=>createDieline({model:'TEST',category:'rod',length:0,width:23,depth:16}));
   assert.throws(()=>createDieline({model:'TEST',category:'nope',length:83,width:23,depth:16}));
 });
+test('presentation board renders every preset without invalid numbers',async()=>{
+  const {createPresentationSvg}=await import('../src/presentation.js');
+  for(const item of Object.values(PRESETS)){
+    const svg=createPresentationSvg(item);
+    assert.doesNotMatch(svg,/NaN|undefined/);
+    assert(svg.includes(item.model));
+    for(const d of [item.length,item.width,item.depth]) assert(svg.includes(`${d} mm`));
+  }
+});
+test('dieline flaps and glue tab are closed cut outlines',()=>{
+  const d=createDieline(PRESETS.SI15C);
+  assert.equal(d.creasePaths.length,12);
+  for(const path of d.cutPaths) assert.match(path,/^M[-\d.,]+(L|Q)/);
+});

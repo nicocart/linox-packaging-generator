@@ -1,101 +1,127 @@
-import { createDieline, normalizeInput } from './geometry.js';
+import { normalizeInput } from './geometry.js';
 import { defs, createFlatSvg, productArtworkForPreview, previewFaceArtwork } from './artwork.js';
 
-
-// Presentation only: box views are deliberately enlarged to show typography.
-// The die below and exported dieline preserve real millimetre proportions.
-const v=n=>Number(n.toFixed(3));
+/*
+ * Presentation board in the layout of the approved reference sheets: front,
+ * back and side faces plus an opened carton on a grey stage, and the printed
+ * dieline below. Faces and dieline use one fixed display proportion so every
+ * SKU reads the same way; the dimension labels carry the real millimetres.
+ * The exact-unit production die is exported separately by createFlatSvg().
+ */
+const v=n=>Number(n.toFixed(2));
 const esc=s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
-function line(x1,y1,x2,y2,color='#222',width=1.1){return `<line x1="${v(x1)}" y1="${v(y1)}" x2="${v(x2)}" y2="${v(y2)}" stroke="${color}" stroke-width="${width}"/>`;}
-function label(x,y,s,{size=13,color='#74777b',anchor='middle',weight='500'}={}){return `<text x="${v(x)}" y="${v(y)}" fill="${color}" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="${size}" font-weight="${weight}" text-anchor="${anchor}">${esc(s)}</text>`;}
-function ticks(x,y,w,h){return `<g stroke="#a09f9b" stroke-width=".9" opacity=".8">${line(x+1,y+13,x+1,y+2)}${line(x+1,y+2,x+12,y+2)}${line(x+w-12,y+2,x+w-1,y+2)}${line(x+w-1,y+2,x+w-1,y+13)}</g>`;}
-function panel(x,y,w,h,raw,type){
-  const config=normalizeInput(raw);
-  const art=previewFaceArtwork(config,type,w,h);
-  return `<g filter="url(#softBoxShadow)">
-  <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="url(#paperGrad)" stroke="#c2c0bd" stroke-width="1.35"/>
-  <path d="M${x+4},${y+9}L${x+w-4},${y+9}" stroke="#fff" opacity=".88" stroke-width="2"/>
-  <path d="M${x+4},${y+h-6}L${x+w-4},${y+h-6}" stroke="#aaa" opacity=".13"/>
-  <g transform="translate(${x} ${y})">${art}</g>
-  ${ticks(x,y,w,h)}</g>`;
-}
-function sizeArrow(x1,x2,y,txt){
-  return `<g stroke="#383838" stroke-width="1.35" fill="none">
-    <path d="M${x1},${y-11}V${y+13}M${x2},${y-11}V${y+13}" opacity=".6"/>
-    <path d="M${x1},${y}H${x2} M${x1+8},${y-4}L${x1},${y}L${x1+8},${y+4} M${x2-8},${y-4}L${x2},${y}L${x2-8},${y+4}"/>
-  </g>${label((x1+x2)/2,y-12,txt,{size:17,color:'#252525',weight:'700'})}`;
-}
-function heightArrow(x,y,h,txt){return `<g stroke="#383838" fill="none" stroke-width="1.25"><path d="M${x-8},${y}H${x+11}M${x-8},${y+h}H${x+11}M${x},${y}V${y+h}"/><path d="M${x-4},${y+8}L${x},${y}L${x+4},${y+8}M${x-4},${y+h-8}L${x},${y+h}L${x+4},${y+h-8}"/></g><text x="${x-13}" y="${y+h/2}" transform="rotate(-90 ${x-13} ${y+h/2})" text-anchor="middle" font-family="Arial,sans-serif" font-size="17" font-weight="700" fill="#252525">${esc(txt)}</text>`;}
-function openCarton(x,y,w,h,raw){
-  const c=normalizeInput(raw);
-  const sx=w/320,sy=h/275;
-  // Mathematical vector mock-up of the open carton; not a photo or AI generated raster.
-  const bag=`<path d="M34 122 L279 110 L276 217 L44 222 Z" fill="url(#polyBag)" stroke="#bfc0c2" stroke-width="2" opacity=".9"/>
-  <path d="M47 137Q95 116 152 129T270 122M45 210L89 201L111 214L183 204L248 214L270 188M54 140L40 164L48 187L37 205M267 131L272 161L264 178L271 193" fill="none" stroke="#fff" stroke-width="3" opacity=".65"/>`;
-  return `<g transform="translate(${x} ${y}) scale(${v(sx)} ${v(sy)})">
-    <ellipse cx="160" cy="255" rx="140" ry="13" fill="#292929" opacity=".12" filter="url(#blur)"/>
-    <path d="M31 105L16 15Q14 5 23 7L270 23Q281 24 282 39L300 122Z" fill="url(#paperGrad)" stroke="#999" stroke-width="1.5"/>
-    <path d="M26 14L267 30L273 106L42 103Z" fill="#eee" stroke="#d6d4d3" stroke-width="1"/>
-    <path d="M29 104L282 103L301 134L284 226L24 237L12 141Z" fill="#fff" stroke="#aaa" stroke-width="1.8"/>
-    <path d="M32 120L280 116L276 208L39 216Z" fill="#e8e9ec" stroke="#aeb0b2" stroke-width="1.7"/>
-    ${bag}
-    <g transform="translate(68 139)">${productArtworkForPreview(c.category,190,70)}</g>
-    <path d="M22 218L285 213L279 255L28 253Z" fill="url(#paperGrad)" stroke="#9c9c9c" stroke-width="1.4"/>
-    <path d="M31 235L275 232" stroke="white" stroke-width="3" opacity=".78"/>
-    <path d="M13 141L23 219L30 253L19 244L6 167Z" fill="#e9e9e9" stroke="#a7a7a7"/>
-    ${label(160,248,'LINOX',12,{color:'#777',weight:'700'})}
+const FONT=`font-family="'Segoe UI','Noto Sans',Arial,sans-serif"`;
+const label=(x,y,s,{size=20,color='#2a2a2a',anchor='middle',weight='400',extra=''}={})=>`<text x="${v(x)}" y="${v(y)}" fill="${color}" ${FONT} font-size="${size}" font-weight="${weight}" text-anchor="${anchor}" ${extra}>${esc(s)}</text>`;
+
+const PAGE_W=1448, PAGE_H=1086, STAGE_H=520;
+// Display faces in reference proportion: front/back 424 × 263, side 105 × 263.
+const FACE={ w:415, h:258, side:103 };
+// Template carton in mm with the same L:W:H as the display faces.
+const TEMPLATE={ length:84.8, width:52.6, depth:21 };
+
+/** Closed carton face with a sliver of the top panel and a contact shadow. */
+function face(x,y,w,h,config,kind){
+  const lip=5;
+  return `<g>
+  <ellipse cx="${v(x+w/2)}" cy="${v(y+h+3)}" rx="${v(w*.52)}" ry="7" fill="#1d1f22" opacity=".16" filter="url(#blur6)"/>
+  <path d="M${x+2},${y}L${x+5},${y-lip}H${x+w-5}L${x+w-2},${y}Z" fill="#fbfbfb" stroke="#b9babc" stroke-width=".9"/>
+  <path d="M${x+5},${y-lip}l3,-1.6M${x+w-5},${y-lip}l-3,-1.6" stroke="#c5c6c8" stroke-width=".9"/>
+  <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="url(#faceGrad)" stroke="#b4b5b8" stroke-width="1"/>
+  <g transform="translate(${x} ${y})">${previewFaceArtwork(config,kind,w,h)}</g>
+  <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="url(#faceSheen)"/>
   </g>`;
+}
+
+function dimH(x1,x2,y,boxTop,txt){
+  return `<g stroke="#3a3a3a" stroke-width="1.2" fill="#3a3a3a">
+  <path d="M${x1},${y-8}V${boxTop-6}M${x2},${y-8}V${boxTop-6}" fill="none"/>
+  <path d="M${x1},${y}H${x2}" fill="none"/>
+  <path d="M${x1},${y}l9,-3.5v7zM${x2},${y}l-9,-3.5v7z" stroke="none"/></g>
+  ${label((x1+x2)/2,y-10,txt,{size:21})}`;
+}
+function dimV(x,y1,y2,boxLeft,txt){
+  const cy=(y1+y2)/2;
+  return `<g stroke="#3a3a3a" stroke-width="1.2" fill="#3a3a3a">
+  <path d="M${x-8},${y1}H${boxLeft-6}M${x-8},${y2}H${boxLeft-6}" fill="none"/>
+  <path d="M${x},${y1}V${y2}" fill="none"/>
+  <path d="M${x},${y1}l-3.5,9h7zM${x},${y2}l-3.5,-9h7z" stroke="none"/></g>
+  ${label(x-12,cy,txt,{size:21,extra:`transform="rotate(-90 ${v(x-12)} ${v(cy)})"`})}`;
+}
+
+/**
+ * Opened carton seen from the front-right, lid hinged at the back and raised,
+ * product lying in a poly bag. Real 3D points projected to the page.
+ */
+function openCarton(ox,oy,config){
+  const L=285, D=175, H=96;
+  const ex=[.97,.085], ey=[.3,-.74];
+  const P=(x,y,z)=>[ox+x*ex[0]+y*ey[0], oy+x*ex[1]+y*ey[1]-z];
+  const poly=(pts,attrs)=>`<path d="M${pts.map(p=>p.map(v).join(',')).join('L')}Z" ${attrs}/>`;
+  const phi=100*Math.PI/180, dir=[0,-Math.cos(phi),Math.sin(phi)], tuckDir=[0,-Math.sin(phi),-Math.cos(phi)];
+  const tip=(x,k=D)=>P(x,D+dir[1]*k,H+dir[2]*k);
+  const T=30;
+  const tuck=x=>P(x,D+dir[1]*D+tuckDir[1]*T,H+dir[2]*D+tuckDir[2]*T);
+  const lid=poly([P(0,D,H),P(L,D,H),tip(L),tip(0)],'fill="url(#lidGrad)" stroke="#a9aaad" stroke-width="1.2" stroke-linejoin="round"');
+  const lidTuck=poly([tip(0),tip(L),tuck(L-8),tuck(8)],'fill="#f3f3f3" stroke="#a9aaad" stroke-width="1.1" stroke-linejoin="round"');
+  const back=poly([P(0,D,0),P(L,D,0),P(L,D,H),P(0,D,H)],'fill="#dcdcdd"');
+  const left=poly([P(0,0,0),P(0,D,0),P(0,D,H),P(0,0,H)],'fill="#cfd0d2"');
+  const floor=poly([P(0,0,0),P(L,0,0),P(L,D,0),P(0,D,0)],'fill="#e6e6e7"');
+  const front=poly([P(0,0,0),P(L,0,0),P(L,0,H),P(0,0,H)],'fill="url(#wallFront)" stroke="#a5a6a9" stroke-width="1.2" stroke-linejoin="round"');
+  const right=poly([P(L,0,0),P(L,D,0),P(L,D,H),P(L,0,H)],'fill="url(#wallSide)" stroke="#a5a6a9" stroke-width="1.2" stroke-linejoin="round"');
+  const rim=`<path d="M${P(0,0,H).map(v)}L${P(L,0,H).map(v)}L${P(L,D,H).map(v)}" fill="none" stroke="#fff" stroke-width="2.4"/>`;
+  // Poly bag occupying most of the floor, with crinkle highlights.
+  const [bx,by]=P(L*.06,D*.9,H*.55), [cx,cy]=P(L*.5,D*.55,H*.95);
+  const bagPath=`M${v(bx)},${v(by)}L${P(L*.95,D*.92,H*.55).map(v)}L${P(L*.97,D*.12,H*.85).map(v)}L${P(L*.04,D*.08,H*.85).map(v)}Z`;
+  const bag=`<clipPath id="bagClip"><path d="${bagPath}"/></clipPath><path d="${bagPath}" fill="url(#bagGrad)" stroke="#c4c6c9" stroke-width="1.4" stroke-linejoin="round"/>`;
+  const crinkle=`<g fill="none" stroke="#fff" stroke-linecap="round" opacity=".8" clip-path="url(#bagClip)">
+    <path d="M${v(cx-130)},${v(cy-38)}q30,-14 60,-4t70,-6" stroke-width="2.6"/>
+    <path d="M${v(cx-125)},${v(cy+48)}q40,10 80,-2t90,6" stroke-width="2.2"/>
+    <path d="M${v(cx+95)},${v(cy-70)}q-10,30 4,56t-8,52" stroke-width="2"/>
+    <path d="M${v(cx-118)},${v(cy-10)}q14,20 2,40" stroke-width="1.8"/>
+    <path d="M${v(cx-60)},${v(cy-62)}l40,8l50,-6l40,10" stroke-width="1.4" stroke="#b9bbbf" opacity=".6"/></g>`;
+  const pw=250, ph=pw*.75;
+  const product=`<g transform="translate(${v(cx-pw/2)} ${v(cy-ph/2-6)})">${productArtworkForPreview(config.category,pw,ph,{shaded:true})}</g>`;
+  const film=`<path d="${bagPath}" fill="url(#filmGrad)"/>`;
+  const shadow=`<ellipse cx="${v(P(L*.55,D*.3,0)[0])}" cy="${v(P(L*.5,0,0)[1]+12)}" rx="${v(L*.62)}" ry="16" fill="#1d1f22" opacity=".2" filter="url(#blur6)"/>`;
+  return `<g>${shadow}${lid}${lidTuck}${back}${left}${floor}${bag}${product}${film}${crinkle}${front}${right}${rim}</g>`;
 }
 
 export function createPresentationSvg(raw){
   const c=normalizeInput(raw);
-  const dieline=createDieline(raw);
-  const square=c.length/c.width<1.6;
-  const W=1440, headerH=420, stageBottom=930;
-  const frontW=square?250:362,backW=frontW,sideW=square?91:95;
-  const faceH=square?246:216;
-  const openW=345,openH=277;
-  const gap=square?29:22;
-  const rowW=frontW+backW+sideW+openW+3*gap;
-  const left=(W-rowW)/2;
-  const frontX=left,backX=frontX+frontW+gap,sideX=backX+backW+gap,openX=sideX+sideW+gap;
-  const y=122+(250-faceH)/2;
-  const top= `<rect x="0" y="0" width="1440" height="${headerH}" fill="url(#stageGrad)"/>
-  ${label(50,36,'LINOX   /   PACKAGING PRESENTATION',{anchor:'start',size:13,color:'#bc1d2c',weight:'700'})}
-  ${label(1390,36,`${esc(c.model)}  ·  ${c.length} × ${c.width} × ${c.depth} mm`,{anchor:'end',size:13,color:'#656568',weight:'700'})}
-  ${panel(frontX,y,frontW,faceH,raw,'front')}
-  ${panel(backX,y,backW,faceH,raw,'back')}
-  ${panel(sideX,y,sideW,faceH,raw,'side')}
-  ${openCarton(openX,y-17,openW,openH,raw)}
-  ${sizeArrow(frontX,frontX+frontW,y-30,`${c.length} mm`)}
-  ${sizeArrow(sideX,sideX+sideW,y-30,`${c.depth} mm`)}
-  ${heightArrow(frontX-17,y,faceH,`${c.width} mm`)}
-  ${label(frontX+frontW/2,395,'FRONT / 正面',{size:12})}
-  ${label(backX+backW/2,395,'BACK / 背面',{size:12})}
-  ${label(sideX+sideW/2,395,'SIDE / 侧面',{size:12})}
-  ${label(openX+openW/2,395,'OPEN BOX / 结构示意',{size:12})}`;
+  const {w:fw,h:fh,side:sw}=FACE;
+  const gap=26, frontX=62, backX=frontX+fw+gap, sideX=backX+fw+gap, faceY=196;
+  const stage=`<rect width="${PAGE_W}" height="${STAGE_H}" fill="url(#stageGrad)"/>
+  ${face(frontX,faceY,fw,fh,c,'front')}
+  ${face(backX,faceY,fw,fh,c,'back')}
+  ${face(sideX,faceY,sw,fh,c,'side')}
+  ${dimH(frontX,frontX+fw,166,faceY,`${c.length} mm`)}
+  ${dimH(sideX,sideX+sw,166,faceY,`${c.depth} mm`)}
+  ${dimV(34,faceY,faceY+fh,frontX,`${c.width} mm`)}
+  ${openCarton(1078,492,c)}`;
 
-  // The physical geometry stays exact-unit and proportional below. The SVG is
-  // embedded within a larger artboard for review, never altering die coordinates.
-  const b=dieline.bounds;
-  const dW=b.maxX-b.minX, dH=b.maxY-b.minY;
-  const targetW=1310,targetH=410;
-  const scale=Math.min(targetW/dW,targetH/dH);
-  const actualW=dW*scale,actualH=dH*scale;
-  const dx=(W-actualW)/2,dy=475+(targetH-actualH)/2;
-  const flat=createFlatSvg(raw,{withDimensions:false});
-  const naked=flat.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'').replace(/<title>[\s\S]*?<\/title>/,'').replace(/<desc>[\s\S]*?<\/desc>/,'');
-  const dielineArt=`<rect x="0" y="420" width="1440" height="${stageBottom-420}" fill="#ffffff"/>
-  ${label(50,456,'DIELINE / 刀模展开',{anchor:'start',size:16,color:'#222',weight:'700'})}
-  ${label(1390,456,'CUT · red   /   FOLD · blue   /   印刷文件保持真实毫米尺寸',{anchor:'end',size:12,color:'#9a9a9a'})}
-  <g transform="translate(${v(dx)} ${v(dy)}) scale(${v(scale)}) translate(${-b.minX} ${-b.minY})">${naked}</g>
-  ${label(720,917,'视觉效果预览（上） · 精确等比例刀模（下） · 正式开模须包装厂复核',{size:12,color:'#8b8b8b'})}`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1440" height="${stageBottom}" viewBox="0 0 1440 ${stageBottom}" role="img" aria-label="${esc(c.model)} 包装效果与刀模综合预览">
+  // Printed dieline at display proportion, generated by the same geometry
+  // and artwork code as the production export.
+  const tpl={...raw,...TEMPLATE,mode:'box'};
+  const flat=createFlatSvg(tpl,{withDimensions:false,style:'presentation'});
+  const vb=flat.match(/viewBox="([^"]+)"/)[1].split(' ').map(Number);
+  const inner=flat.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'').replace(/<title>[\s\S]*?<\/title>/,'').replace(/<desc>[\s\S]*?<\/desc>/,'').replace(/<defs>[\s\S]*?<\/defs>/,'');
+  const areaW=PAGE_W-80, areaH=PAGE_H-STAGE_H-40;
+  const scale=Math.min(areaW/vb[2],areaH/vb[3]);
+  const dx=(PAGE_W-vb[2]*scale)/2, dy=STAGE_H+(areaH-vb[3]*scale)/2+8;
+  const die=`<rect y="${STAGE_H}" width="${PAGE_W}" height="${PAGE_H-STAGE_H}" fill="#fff"/>
+  <g transform="translate(${v(dx)} ${v(dy)}) scale(${v(scale)}) translate(${-vb[0]} ${-vb[1]})">${inner}</g>
+  ${label(PAGE_W-24,PAGE_H-16,'示意比例 · 生产请导出精确毫米刀模 SVG',{size:12,color:'#b3b3b3',anchor:'end'})}`;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${PAGE_W}" height="${PAGE_H}" viewBox="0 0 ${PAGE_W} ${PAGE_H}" role="img" aria-label="${esc(c.model)} 包装效果与刀模综合预览">
   <defs>
-   <linearGradient id="stageGrad" x1="0" y1="0" x2="0.3" y2="1"><stop stop-color="#ebebec"/><stop offset=".6" stop-color="#f7f7f6"/><stop offset="1" stop-color="#dcdde0"/></linearGradient>
-   <linearGradient id="paperGrad" x1="0" y1="0" x2="0.4" y2="1"><stop stop-color="#fdfdfd"/><stop offset=".18" stop-color="#fff"/><stop offset=".88" stop-color="#f7f7f6"/><stop offset="1" stop-color="#e4e4e4"/></linearGradient>
-   <linearGradient id="polyBag" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f3f4f7" stop-opacity=".7"/><stop offset=".5" stop-color="#c8c9cb" stop-opacity=".37"/><stop offset="1" stop-color="#f6f6f8" stop-opacity=".8"/></linearGradient>
-   <filter id="softBoxShadow" x="-20%" y="-25%" width="150%" height="170%"><feDropShadow dx="2" dy="10" stdDeviation="8" flood-color="#111" flood-opacity=".17"/></filter>
-   <filter id="blur"><feGaussianBlur stdDeviation="8"/></filter>
-  </defs>${defs}${top}${dielineArt}</svg>`;
+   <linearGradient id="stageGrad" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#e4e5e7"/><stop offset=".55" stop-color="#d9dadc"/><stop offset="1" stop-color="#cbccce"/></linearGradient>
+   <linearGradient id="faceGrad" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ffffff"/><stop offset=".85" stop-color="#f8f8f8"/><stop offset="1" stop-color="#ececec"/></linearGradient>
+   <linearGradient id="faceSheen" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".0"/><stop offset=".7" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#9a9a9a" stop-opacity=".08"/></linearGradient>
+   <linearGradient id="lidGrad" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f1f1f1"/><stop offset="1" stop-color="#dcdcdd"/></linearGradient>
+   <linearGradient id="wallFront" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#ececed"/></linearGradient>
+   <linearGradient id="wallSide" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#f4f4f5"/><stop offset="1" stop-color="#dedfe0"/></linearGradient>
+   <linearGradient id="bagGrad" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e9eaec"/><stop offset=".5" stop-color="#cfd1d4"/><stop offset="1" stop-color="#e2e3e5"/></linearGradient>
+   <linearGradient id="filmGrad" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".45"/><stop offset=".45" stop-color="#fff" stop-opacity=".08"/><stop offset="1" stop-color="#fff" stop-opacity=".35"/></linearGradient>
+   <filter id="blur6" x="-20%" y="-200%" width="140%" height="500%"><feGaussianBlur stdDeviation="6"/></filter>
+  </defs>${defs}${stage}${die}</svg>`;
 }

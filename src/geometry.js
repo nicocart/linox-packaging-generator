@@ -58,23 +58,37 @@ export function createDieline(input) {
   const cut = [];
   const crease = [];
   const segment = (arr,x1,y1,x2,y2) => arr.push(`M${p(x1,y1)}L${p(x2,y2)}`);
-  // Tab is tapered to avoid paper collisions at top/bottom.
-  cut.push(`M${p(G,0)}L${p(1,2.4)}L${p(0,3.6)}L${p(0,W-3.6)}L${p(1,W-2.4)}L${p(G,W)}`);
-  // Dust flaps: their bases are folds, their other three sides are cuts.
+  // Open polyline through [x,y,r] vertices; r>0 rounds that corner.
+  const rounded = pts => {
+    let d = `M${p(pts[0][0], pts[0][1])}`;
+    for (let i = 1; i < pts.length; i++) {
+      const [x, y, r = 0] = pts[i];
+      if (!r || i === pts.length - 1) { d += `L${p(x, y)}`; continue; }
+      const towards = ([qx, qy]) => { const len = Math.hypot(qx - x, qy - y); const k = Math.min(r, len / 2) / len; return [x + (qx - x) * k, y + (qy - y) * k]; };
+      const a = towards(pts[i - 1]), b = towards(pts[i + 1]);
+      d += `L${p(...a)}Q${p(x, y)} ${p(...b)}`;
+    }
+    return d;
+  };
+  // Glue tab is tapered at both ends to avoid paper collisions.
+  const gt = round(clamp(W * 0.11, 2, 5));
+  cut.push(rounded([[G, 0], [0, gt, 1], [0, W - gt, 1], [G, W]]));
+  // Dust flaps: their bases are folds, the other three sides are cuts with rounded tips.
+  const dt = round(Math.min(1.5, H * 0.1)), dr = round(Math.min(D * 0.4, H * 0.22, 3));
   for (const q of [sideA, sideB]) {
-    cut.push(`M${p(q.x,0)}L${p(q.x+1.3,-D)}L${p(q.x+q.w-1.3,-D)}L${p(q.x+q.w,0)}`);
-    cut.push(`M${p(q.x,W)}L${p(q.x+1.3,W+D)}L${p(q.x+q.w-1.3,W+D)}L${p(q.x+q.w,W)}`);
-    segment(crease,q.x,0,q.x+q.w,0);
-    segment(crease,q.x,W,q.x+q.w,W);
+    for (const [base, tip] of [[0, -D], [W, W + D]]) {
+      cut.push(rounded([[q.x, base], [q.x + dt, tip, dr], [q.x + q.w - dt, tip, dr], [q.x + q.w, base]]));
+      segment(crease, q.x, base, q.x + q.w, base);
+    }
   }
-  // Top front tuck end has a full depth cover and integrated tuck lip.
-  const cf = round(Math.min(3, L*0.07));
-  cut.push(`M${p(front.x,0)}L${p(front.x,-H)}L${p(front.x+cf,-H-T)}L${p(front.x+L-cf,-H-T)}L${p(front.x+L,-H)}L${p(front.x+L,0)}`);
+  // Tuck lids: full-depth cover panel, then a tuck lip with small shoulders and rounded corners.
+  const sh = round(Math.min(0.8, L * 0.02)), tr = round(Math.min(T * 0.5, L * 0.12, 4));
+  const lid = (x0, base, dir) => rounded([[x0, base], [x0, base + dir * H], [x0 + sh, base + dir * H], [x0 + sh, base + dir * (H + T), tr], [x0 + L - sh, base + dir * (H + T), tr], [x0 + L - sh, base + dir * H], [x0 + L, base + dir * H], [x0 + L, base]]);
+  // Top front tuck end; the bottom back tuck closes in the opposite direction.
+  cut.push(lid(front.x, 0, -1));
   segment(crease,front.x,0,front.x+L,0);
   segment(crease,front.x,-H,front.x+L,-H);
-  // Bottom back tuck closure goes in the opposite direction.
-  const cb = round(Math.min(3, L*0.07));
-  cut.push(`M${p(back.x,W)}L${p(back.x,W+H)}L${p(back.x+cb,W+H+T)}L${p(back.x+L-cb,W+H+T)}L${p(back.x+L,W+H)}L${p(back.x+L,W)}`);
+  cut.push(lid(back.x, W, 1));
   segment(crease,back.x,W,back.x+L,W);
   segment(crease,back.x,W+H,back.x+L,W+H);
   // Two ends without cover flap remain open cut edges.

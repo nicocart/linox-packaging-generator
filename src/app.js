@@ -32,7 +32,7 @@ function render() {
     $('summary-model').textContent=conf.model;
     $('summary-category').textContent=CATEGORY[conf.category].label;
     $('summary-dims').textContent=[conf.length,conf.width,conf.depth].join(' × ');
-    $('drawing-caption').textContent={views:'前 / 后 / 侧面',flat:'上方包装展示 · 下方精确刀模',iso:'闭合盒型投影'}[activeTab];
+    $('drawing-caption').textContent={views:'前 / 后 / 侧面',flat:'上方包装展示 · 下方刀模示意（导出为精确毫米）',iso:'闭合盒型投影'}[activeTab];
     const messages=assessLayout(raw);
     $('warnings').replaceChildren(...messages.map(msg=>{const li=document.createElement('li');li.textContent=msg;return li;}));
     $('drawing').classList.remove('invalid');
