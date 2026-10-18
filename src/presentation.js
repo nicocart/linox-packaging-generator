@@ -1,5 +1,5 @@
 import { normalizeInput } from './geometry.js';
-import { defs, createFlatSvg, productArtworkForPreview, previewFaceArtwork } from './artwork.js';
+import { artDefs, createFlatSvg, productArtworkForPreview, previewFaceArtwork } from './artwork.js';
 
 /*
  * Presentation board in the layout of the approved reference sheets: front,
@@ -79,8 +79,8 @@ function openCarton(ox,oy,config){
     <path d="M${v(cx+95)},${v(cy-70)}q-10,30 4,56t-8,52" stroke-width="2"/>
     <path d="M${v(cx-118)},${v(cy-10)}q14,20 2,40" stroke-width="1.8"/>
     <path d="M${v(cx-60)},${v(cy-62)}l40,8l50,-6l40,10" stroke-width="1.4" stroke="#b9bbbf" opacity=".6"/></g>`;
-  const pw=250, ph=pw*.75;
-  const product=`<g transform="translate(${v(cx-pw/2)} ${v(cy-ph/2-6)})">${productArtworkForPreview(config.category,pw,ph,{shaded:true})}</g>`;
+  const pw=205, ph=pw*.75;
+  const product=`<g transform="translate(${v(cx-pw/2-6)} ${v(cy-ph/2+4)})">${productArtworkForPreview(config.category,pw,ph,{shaded:true})}</g>`;
   const film=`<path d="${bagPath}" fill="url(#filmGrad)"/>`;
   const shadow=`<ellipse cx="${v(P(L*.55,D*.3,0)[0])}" cy="${v(P(L*.5,0,0)[1]+12)}" rx="${v(L*.62)}" ry="16" fill="#1d1f22" opacity=".2" filter="url(#blur6)"/>`;
   return `<g>${shadow}${lid}${lidTuck}${back}${left}${floor}${bag}${product}${film}${crinkle}${front}${right}${rim}</g>`;
@@ -123,5 +123,5 @@ export function createPresentationSvg(raw){
    <linearGradient id="bagGrad" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e9eaec"/><stop offset=".5" stop-color="#cfd1d4"/><stop offset="1" stop-color="#e2e3e5"/></linearGradient>
    <linearGradient id="filmGrad" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".45"/><stop offset=".45" stop-color="#fff" stop-opacity=".08"/><stop offset="1" stop-color="#fff" stop-opacity=".35"/></linearGradient>
    <filter id="blur6" x="-20%" y="-200%" width="140%" height="500%"><feGaussianBlur stdDeviation="6"/></filter>
-  </defs>${defs}${stage}${die}</svg>`;
+  </defs>${artDefs(c.category)}${stage}${die}</svg>`;
 }

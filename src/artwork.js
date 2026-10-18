@@ -1,5 +1,5 @@
 import { createDieline, CATEGORY, normalizeInput } from './geometry.js';
-import { illustrationSymbols } from './illustrations.js';
+import { ASSETS } from './assets.js';
 
 /** SVG is entirely procedural. No AI/image assets or external font/network dependencies. */
 const esc = value => String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&apos;');
@@ -8,21 +8,44 @@ const line = (x1,y1,x2,y2,other='') => `<line x1="${n(x1)}" y1="${n(y1)}" x2="${
 const rect = (x,y,w,h,other='') => `<rect x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" ${other}/>`;
 const text = (x,y,str,fs,other='') => `<text x="${n(x)}" y="${n(y)}" font-size="${n(fs)}" ${other}>${esc(str)}</text>`;
 
-export const defs = `<defs>${illustrationSymbols()}</defs>`;
+/**
+ * Supplied raster artwork as reusable symbols: the category product drawing
+ * and the back-panel brand block. Only the current category is embedded.
+ * `metalTone` tints white line art grey for the opened-carton mock-up.
+ */
+const symbol=(id,{width,height,href})=>`<symbol id="${id}" viewBox="0 0 ${width} ${height}"><image href="${href}" width="${width}" height="${height}"/></symbol>`;
+export function artDefs(category) {
+  const key=CATEGORY[category].illustration;
+  return `<defs>${symbol(`pic-${key}`,ASSETS[key])}${symbol('back-panel',ASSETS['back-panel'])}
+<filter id="metalTone" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".74 0 0 0 .02  0 .76 0 0 .02  0 0 .79 0 .03  0 0 0 1 0"/></filter></defs>`;
+}
 
-/** Vector tracing from the reference packaging image, not the original brand master. */
-const WORDMARK_PATH = 'M167.85 0.00 L167.85 1.09 L184.96 23.87 L184.96 26.04 L167.85 48.83 L167.85 49.91 L183.33 49.91 L191.48 39.06 L191.48 37.98 L193.11 35.81 L193.93 35.81 L204.52 49.91 L219.19 49.91 L219.19 48.83 L202.07 26.04 L202.07 24.96 L206.15 19.53 L206.15 18.45 L219.19 1.09 L219.19 0.00 L203.70 0.00 L193.93 14.11 L193.11 14.11 L192.30 11.94 L183.33 0.00 Z M121.41 2.17 L121.41 11.94 L120.59 13.02 L120.59 16.28 L121.41 17.36 L121.41 26.04 L120.59 27.13 L120.59 35.81 L121.41 36.89 L121.41 44.49 L124.67 48.83 L126.30 49.91 L164.59 49.91 L154.81 36.89 L153.19 35.81 L133.63 35.81 L132.00 33.64 L132.00 15.19 L127.93 9.77 L128.74 8.68 L129.56 8.68 L133.63 14.11 L153.19 14.11 L154.81 16.28 L154.81 33.64 L165.41 47.74 L166.22 47.74 L166.22 5.43 L163.78 1.09 L162.15 1.09 L161.33 0.00 L123.04 0.00 L123.04 1.09 L127.93 7.60 L127.11 8.68 L126.30 8.68 Z M105.93 0.00 L105.93 27.13 L107.56 28.21 L117.33 41.23 L117.33 0.00 Z M67.63 0.00 L67.63 49.91 L79.85 49.91 L79.85 21.70 L80.67 20.62 L81.48 20.62 L103.48 49.91 L120.59 49.91 L120.59 48.83 L111.63 36.89 L110.81 36.89 L82.30 0.00 Z M50.52 0.00 L50.52 48.83 L51.33 49.91 L63.56 49.91 L63.56 0.00 Z M0.00 0.00 L0.00 49.91 L46.44 49.91 L47.26 48.83 L47.26 35.81 L46.44 34.72 L13.85 34.72 L13.04 33.64 L13.04 1.09 L12.22 0.00 Z';
-const LOGO_RATIO = 0.178; // wordmark height / width, matched to the reference cartons
+/** Official LINOX wordmark (linox-astro/src/images/linox-logo.svg), clip-path construction flattened to paths. */
+const WORDMARK_PATH = 'M9.2148 7.5742H26.4414V42.3125H66.9648V59.5352H9.2148Z'
+  + 'M70.5703 7.5742H87.793V59.5352H70.5703Z'
+  + 'M91.8516 7.5742L91.8828 59.5352H109.1211V28.7813L139.875 59.5352H161.1875V55.5039L113.2578 7.5742Z'
+  + 'M144.0117 7.5742V30.418L161.1875 47.5977V7.5742Z'
+  + 'M174.9141 7.5742L190.8516 24.7969H218.1953V41.9609L235.418 59.1875V7.5742Z'
+  + 'M183.3086 42.3125V25.1328L166.082 7.9063V46.293L179.3242 59.5352H228.1641L210.9375 42.3125Z'
+  + 'M289.7422 7.5742L237.7813 59.5352H263.125L315.0859 7.5742Z'
+  + 'M273.8359 18.4063L263.1406 7.5742H237.8125L261.1719 31.0703Z'
+  + 'M279.0469 48.7188L289.7266 59.5352H315.0703L291.7109 36.0547Z';
+const WORDMARK_BOX = { x: 9.2148, y: 7.5742, w: 305.871, h: 51.961 };
+const LINOX_RED = '#e60012';
 const FONT = `font-family="Bahnschrift,'DIN Alternate','Roboto Condensed','Arial Narrow',Arial,sans-serif"`;
 
 /** LINOX wordmark at (x,y) top-left, `w` wide. ® sits outside `w`, top right. */
-export function logo(x,y,w,{color='#c90012',registered=true}={}) {
-  const xs=w/219.19, ys=w*LOGO_RATIO/49.91, r=w*.03;
-  const mark=registered?`<g fill="none" stroke="${color==='#c90012'?'#1a1a1a':color}" stroke-width="${n(r*.16)}"><circle cx="${n(x+w+r*1.9)}" cy="${n(y+r*1.1)}" r="${n(r)}"/></g>${text(x+w+r*1.9,y+r*1.5,'R',r*1.15,`${FONT} font-weight="700" text-anchor="middle" fill="${color==='#c90012'?'#1a1a1a':color}"`)}`:'';
-  return `<g transform="translate(${n(x)} ${n(y)}) scale(${n(xs)} ${n(ys)})" fill="${color}"><path d="${WORDMARK_PATH}" fill-rule="evenodd"/></g>${mark}`;
+export function logo(x,y,w,{color=LINOX_RED,registered=true}={}) {
+  const k=w/WORDMARK_BOX.w, r=w*.03, ink=color===LINOX_RED?'#1a1a1a':color;
+  const mark=registered?`<g fill="none" stroke="${ink}" stroke-width="${n(r*.16)}"><circle cx="${n(x+w+r*1.9)}" cy="${n(y+r*1.1)}" r="${n(r)}"/></g>${text(x+w+r*1.9,y+r*1.5,'R',r*1.15,`${FONT} font-weight="700" text-anchor="middle" fill="${ink}"`)}`:'';
+  return `<g transform="translate(${n(x)} ${n(y)}) scale(${n(k)}) translate(${-WORDMARK_BOX.x} ${-WORDMARK_BOX.y})" fill="${color}"><path d="${WORDMARK_PATH}"/></g>${mark}`;
 }
 
-function productPic(category,x,y,w,h,{shaded=false}={}) { return `<use href="#pic-${CATEGORY[category].illustration}${shaded?'-shaded':''}" x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}"/>`; }
+function productPic(category,x,y,w,h,{shaded=false}={}) {
+  const key=CATEGORY[category].illustration;
+  // The deep-groove render is already shaded; only line art needs toning.
+  return `<use href="#pic-${key}" x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}"${shaded&&key!=='deep'?' filter="url(#metalTone)"':''}/>`;
+}
 
 /** Category label broken into at most two lines, as on the reference front panels. */
 function labelLines(label) {
@@ -68,29 +91,11 @@ function frontArtwork(config,x,y,w,h) {
   return `<g>${out}</g>`;
 }
 
-function bearingIcon(cx,cy,r) {
-  const balls=Array.from({length:8},(_,i)=>{const a=i*Math.PI/4;return `<circle cx="${n(cx+r*.62*Math.cos(a))}" cy="${n(cy+r*.62*Math.sin(a))}" r="${n(r*.17)}"/>`;}).join('');
-  return `<g fill="none" stroke="#151515"><circle cx="${n(cx)}" cy="${n(cy)}" r="${n(r*.92)}" stroke-width="${n(r*.15)}"/><circle cx="${n(cx)}" cy="${n(cy)}" r="${n(r*.3)}" stroke-width="${n(r*.12)}"/><g stroke-width="${n(r*.1)}">${balls}</g></g>`;
-}
-
-/** Back panel: framed brand block (reference unit box 379 × 263). */
+/** Back panel: the supplied brand block, centred (reference unit box 379 × 263). */
 function backArtwork(config,x,y,w,h){
-  const s=Math.min(w/379,h/263), oy=y+(h-263*s)/2, cx=x+w/2, Y=v=>oy+v*s;
-  const fw=Math.min(w-30*s,Math.max(295*s,w*.76)), fx=cx-fw/2, top=Y(46), bottom=Y(218), rr=7*s, sw=2.4*s;
-  const made='MADE IN CHINA', madeFs=12.5*s, gap=made.length*madeFs*.62/2+7*s;
-  const frame=`<path d="M${n(cx-gap)},${n(bottom)}H${n(fx+rr)}Q${n(fx)},${n(bottom)} ${n(fx)},${n(bottom-rr)}V${n(top+rr)}Q${n(fx)},${n(top)} ${n(fx+rr)},${n(top)}H${n(fx+fw-rr)}Q${n(fx+fw)},${n(top)} ${n(fx+fw)},${n(top+rr)}V${n(bottom-rr)}Q${n(fx+fw)},${n(bottom)} ${n(fx+fw-rr)},${n(bottom)}H${n(cx+gap)}" fill="none" stroke="#151515" stroke-width="${n(sw)}" stroke-linejoin="round"/>`;
-  const iconR=23*s, lw=166*s, groupW=iconR*2+16*s+lw+12*s, gx=cx-groupW/2;
-  let out=frame+bearingIcon(gx+iconR,Y(82),iconR);
-  out+=logo(gx+iconR*2+16*s,Y(67),lw,{color:'#151515'});
-  out+=rule(gx+iconR*2+16*s,Y(108),gx+iconR*2+16*s+lw,1.3*s);
-  out+=text(cx,Y(141),'CORROSION-RESISTANT',fitFont('CORROSION-RESISTANT',24*s,fw-24*s,.6),`${FONT} font-weight="700" text-anchor="middle" fill="#151515"`);
-  out+=text(cx,Y(160),'BEARINGS & MOTION COMPONENTS',fitFont('BEARINGS & MOTION COMPONENTS',14.5*s,fw-24*s,.58),`${FONT} text-anchor="middle" fill="#151515"`);
-  const web='www.linoxbearing.com', webHalf=web.length*13*s*.27+8*s;
-  out+=text(cx,Y(184),web,13*s,`${FONT} text-anchor="middle" fill="#151515"`);
-  out+=rule(cx-webHalf-52*s,Y(180),cx-webHalf,1.1*s)+rule(cx+webHalf,Y(180),cx+webHalf+52*s,1.1*s);
-  out+=text(cx,Y(204),'ISO9001:2015',13.5*s,`${FONT} text-anchor="middle" fill="#151515"`);
-  out+=text(cx,bottom+madeFs*.36,made,madeFs,`${FONT} font-weight="600" text-anchor="middle" fill="#151515"`);
-  return `<g>${out}</g>`;
+  const {width,height}=ASSETS['back-panel'];
+  const bw=Math.min(w*.74,h*.7*width/height), bh=bw*height/width;
+  return `<use href="#back-panel" x="${n(x+(w-bw)/2)}" y="${n(y+(h-bh)/2)}" width="${n(bw)}" height="${n(bh)}"/>`;
 }
 
 /**
@@ -151,7 +156,7 @@ export function createFlatSvg(raw,{withDimensions=true,withArtwork=true,style='p
   const creaseStyle=show?'stroke="#ec8c92" stroke-width=".22"':'stroke="#13a4c8" stroke-width=".28" stroke-dasharray="1.2 1.2"';
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${n(sheetW)}mm" height="${n(sheetH)}mm" viewBox="${n(minX)} ${n(minY)} ${n(sheetW)} ${n(sheetH)}" role="img" aria-label="${esc(title)}">
 <title>${esc(title)}</title><desc>Parametric dieline, red cut paths, dashed cyan score/fold paths. Concept tooling, supplier validation required.</desc>
-${defs}
+${artDefs(config.category)}
 ${show?'':rect(minX,minY,sheetW,sheetH,'fill="#fff"')}
 <g id="board" fill="${show?'#f5f5f4':'#fff'}">${body}</g>
 <g id="print" fill="#121212">${artwork}</g>
@@ -172,7 +177,7 @@ export function createViewsSvg(raw) {
   const cap= (x,w,title)=>text(x+w/2,topY+W+8,title,3,'text-anchor="middle" font-family="Arial,sans-serif" fill="#555"');
   const annotations=dimension(frontX,topY-9,frontX+L,topY-9,`${L} mm`)+dimension(frontX-9,topY,frontX-9,topY+W,`${W} mm`,{vertical:true})+dimension(sideX,topY-9,sideX+H,topY-9,`${H} mm`);
   const art=frontArtwork(c,frontX,topY,L,W)+backArtwork(c,backX,topY,L,W)+sideArtwork(c,sideX,topY,H,W);
-  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${n(totalW)}mm" height="${n(totalH)}mm" viewBox="0 0 ${n(totalW)} ${n(totalH)}" role="img" aria-label="${esc(c.model)} three printed views">${defs}${rect(0,0,totalW,totalH,'fill="white"')}${guide}<g>${art}</g>${annotations}${cap(frontX,L,'FRONT')}${cap(backX,L,'BACK')}${cap(sideX,H,'SIDE')}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${n(totalW)}mm" height="${n(totalH)}mm" viewBox="0 0 ${n(totalW)} ${n(totalH)}" role="img" aria-label="${esc(c.model)} three printed views">${artDefs(c.category)}${rect(0,0,totalW,totalH,'fill="white"')}${guide}<g>${art}</g>${annotations}${cap(frontX,L,'FRONT')}${cap(backX,L,'BACK')}${cap(sideX,H,'SIDE')}</svg>`;
 }
 
 /** Closed-carton isometric vector preview, projection calculated from dimensions. */
@@ -186,7 +191,7 @@ export function createIsoSvg(raw) {
   const side=`<g transform="matrix(${n(dx/H)} ${n(dy/H)} 0 1 ${n(x+L)} ${n(y)})">${sideArtwork(c,0,0,H,W)}</g>`;
   const frontGuide=dimension(x,y+W+10,x+L,y+W+10,`${L} mm`);
   const vertGuide=dimension(x-10,y,x-10,y+W,`${W} mm`,{vertical:true});
-  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${n(pageW)}mm" height="${n(pageH+10)}mm" viewBox="0 0 ${n(pageW)} ${n(pageH+10)}" role="img" aria-label="${esc(c.model)} 3D closed carton illustration">${defs}
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${n(pageW)}mm" height="${n(pageH+10)}mm" viewBox="0 0 ${n(pageW)} ${n(pageH+10)}" role="img" aria-label="${esc(c.model)} 3D closed carton illustration">${artDefs(c.category)}
   <g fill="#f4f4f4" stroke="#999" stroke-width=".28">${poly([[x,y],[x+dx,y+dy],[x+L+dx,y+dy],[x+L,y]])}</g>
   <g fill="#e6e6e6" stroke="#999" stroke-width=".28">${poly([[x+L,y],[x+L+dx,y+dy],[x+L+dx,y+W+dy],[x+L,y+W]])}</g>
   <g fill="white" stroke="#888" stroke-width=".28">${rect(x,y,L,W)}</g>

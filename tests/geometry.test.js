@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PRESETS, normalizeInput, createDieline} from '../src/geometry.js';
-import {createFlatSvg,createViewsSvg} from '../src/artwork.js';
+import {createFlatSvg,createViewsSvg,createIsoSvg} from '../src/artwork.js';
 
 test('packaging dimensions reflect preset input',()=>{
   for(const item of Object.values(PRESETS)){
@@ -43,4 +43,15 @@ test('dieline flaps and glue tab are closed cut outlines',()=>{
   const d=createDieline(PRESETS.SI15C);
   assert.equal(d.creasePaths.length,12);
   for(const path of d.cutPaths) assert.match(path,/^M[-\d.,]+(L|Q)/);
+});
+test('every export embeds the category artwork and official wordmark',()=>{
+  for(const item of Object.values(PRESETS)){
+    for(const make of [createFlatSvg,createViewsSvg,createIsoSvg]){
+      const svg=make(item);
+      assert.doesNotMatch(svg,/NaN|undefined/);
+      assert.match(svg,/id="pic-\w+"[^>]*><image href="data:image\/png;base64,/);
+      assert.match(svg,/id="back-panel"/);
+      assert.match(svg,/fill="#e60012"/);
+    }
+  }
 });

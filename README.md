@@ -26,7 +26,7 @@
 
 其中 `length/width/depth` 是名义成品外尺寸，不是产品内部净空。选“产品尺寸”时加上的是 **每个方向的合计余量**，不等于最终净空余量。
 
-**LOGO：** 当前内置 LINOX 红黑字样是基于用户提供的包装图片进行轮廓矢量化的 *可替换参考稿*，不是已确认的官方原版 SVG。上线正式印刷前，将 `src/artwork.js` 里的 `logo()` 替换成经授权、精确描摹的原始 SVG paths。类别插画也是可替换的工程示意图，需按你的真实产品核对后冻结版本。
+**LOGO 与素材：** `src/artwork.js` 中的 LINOX 字标取自官方 `linox-logo.svg`（linox-astro 仓库），已将其 clip-path 结构展平为路径，红色 `#e60012`；® 由程序绘制。产品图（Rod End / 向心关节轴承 / 深沟球轴承）和背面品牌框来自 `assets/*.png`（位图，已裁边并压缩）。替换素材后运行 `npm run assets` 重新生成 `src/assets.js`（以 data URI 内嵌，导出的 SVG 不依赖外部文件）。位图在 80 mm 宽面上约 250–400 dpi，正式印刷前建议换成矢量版。
 
 **尺寸和 PDF：** 下载的 SVG 具备毫米单位。浏览器“打印 / PDF”只提供方便的预览/输出，不保证无缩放或符合印厂 PDF/X 标准。需在矢量编辑工具 / RIP 检查物理尺寸后再用于生产。
 
@@ -40,7 +40,9 @@ src/
   app.js       # browser UI and local export/import
   geometry.js  # mm-based flat dieline cut/fold geometry + validators
   artwork.js   # print artwork (front/back/side layouts) and elevations
-  illustrations.js # per-category product line art (line + shaded variants)
+  assets.js        # generated: product images + back-panel block as data URIs
+assets/            # source PNGs (run `npm run assets` after replacing)
+scripts/build-assets.mjs
   presentation.js  # reference-style presentation board
   styles.css   # desktop/mobile interface and print layout
 tests/
