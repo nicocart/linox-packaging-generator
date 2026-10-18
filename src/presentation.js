@@ -1,6 +1,6 @@
 import { createDieline, normalizeInput } from './geometry.js';
 import { defs, createFlatSvg, productArtworkForPreview, previewFaceArtwork } from './artwork.js';
-import { OPEN_PHOTOS } from './photo-data.js';
+
 
 // Presentation only: box views are deliberately enlarged to show typography.
 // The die below and exported dieline preserve real millimetre proportions.
@@ -66,14 +66,14 @@ export function createPresentationSvg(raw){
   ${panel(frontX,y,frontW,faceH,raw,'front')}
   ${panel(backX,y,backW,faceH,raw,'back')}
   ${panel(sideX,y,sideW,faceH,raw,'side')}
-  ${OPEN_PHOTOS[c.category] ? `<image x="${openX}" y="68" width="${openW}" height="${openH+43}" preserveAspectRatio="xMidYMid meet" href="${OPEN_PHOTOS[c.category]}"/>` : openCarton(openX,y-17,openW,openH,raw)}
+  ${openCarton(openX,y-17,openW,openH,raw)}
   ${sizeArrow(frontX,frontX+frontW,y-30,`${c.length} mm`)}
   ${sizeArrow(sideX,sideX+sideW,y-30,`${c.depth} mm`)}
   ${heightArrow(frontX-17,y,faceH,`${c.width} mm`)}
   ${label(frontX+frontW/2,395,'FRONT / 正面',{size:12})}
   ${label(backX+backW/2,395,'BACK / 背面',{size:12})}
   ${label(sideX+sideW/2,395,'SIDE / 侧面',{size:12})}
-  ${label(openX+openW/2,395,OPEN_PHOTOS[c.category]?'REFERENCE BOX / 分类示例':'OPEN BOX / 结构示意',{size:12})}`;
+  ${label(openX+openW/2,395,'OPEN BOX / 结构示意',{size:12})}`;
 
   // The physical geometry stays exact-unit and proportional below. The SVG is
   // embedded within a larger artboard for review, never altering die coordinates.
