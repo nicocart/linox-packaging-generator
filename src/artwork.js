@@ -62,15 +62,38 @@ function labelLines(label) {
 const fitFont=(str,size,maxW,em=.56)=>Math.min(size,maxW/(Math.max(1,str.length)*em));
 const rule=(x1,y1,x2,width)=>line(x1,y1,x2,y1,`stroke="#1a1a1a" stroke-width="${n(width)}"`);
 
-/**
- * Front panel. Layout units come from the reference carton (424 × 263): logo,
- * rule, model, rule and category stacked on the left, line art on the right.
- * Square-ish panels use a compact 300 × 300 variant.
- */
+export function getLayoutProfile(width,height) {
+  if (!(width>0 && height>0)) throw new Error('Invalid front dimensions');
+  if (height<15 || width<25) return 'compact';
+  if (width/height>=2.25) return 'wide';
+  if (width/height<=1.3) return 'square';
+  return 'landscape';
+}
+
+// The same fixed SVG image is reused for each category; only its placement changes.
+function wideFrontArtwork(config,x,y,w,h){
+  const rows=labelLines(CATEGORY[config.category].label);
+  const left=w*.052;
+  const markWidth=Math.min(w*.465,h*2.16);
+  const titleSize=fitFont(config.model,h*.275,w*.49,.58);
+  const maxRow=Math.max(...rows.map(t=>t.length));
+  const subSize=Math.min(h*.128,w*.45/(maxRow*.53));
+  return `<svg x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" viewBox="0 0 ${n(w)} ${n(h)}" overflow="hidden" data-layout="wide">
+    ${productPic(config.category,w*.570,-h*.073,w*.414,h*1.17)}
+    ${logo(left,h*.137,markWidth)}
+    ${rule(left,h*.49,w*.399,h*.0068)}
+    ${text(left,h*.753,config.model,titleSize,`${FONT} font-weight="700" fill="#151515"`)}
+    ${rule(left,h*.807,w*.389,h*.006)}
+    ${rows.map((t,i)=>text(left,h*(rows.length===1?.948:.864)+i*h*.103,t,subSize,`${FONT} fill="#1d1d1d"`)).join('')}
+  </svg>`;
+}
+
 function frontArtwork(config,x,y,w,h) {
+  const profile=getLayoutProfile(w,h);
+  if(profile==='wide') return wideFrontArtwork(config,x,y,w,h);
   const lines=labelLines(CATEGORY[config.category].label);
   let out='';
-  if (w/h < 1.3) {
+  if (profile==='square' || profile==='compact') {
     const s=Math.min(w,h)/300, ox=x+(w-300*s)/2, oy=y+(h-300*s)/2, X=v=>ox+v*s, Y=v=>oy+v*s;
     out+=productPic(config.category,X(136),Y(172),156*s,117*s);
     out+=logo(X(22),Y(28),222*s);
@@ -78,32 +101,49 @@ function frontArtwork(config,x,y,w,h) {
     out+=text(X(22),Y(148),config.model,fitFont(config.model,46*s,250*s),`${FONT} font-weight="600" fill="#151515"`);
     out+=rule(X(22),Y(166),X(132),1.4*s);
     lines.forEach((t,i)=>out+=text(X(22),Y(192+i*24),t,17.5*s,`${FONT} fill="#1d1d1d"`));
-    return `<g>${out}</g>`;
+    return `<g data-layout="${profile}">${out}</g>`;
   }
-  // Flat panels (wider than ~2.2 : 1) drop the top margin so the stack fills
-  // the height, and centre the drawing in the space right of the text.
-  const flat=w/h>2.2;
-  const s=flat?h/232:Math.min(w/424,h/263), oy=flat?y-30*s:y+(h-263*s)/2, X=v=>x+v*s, Y=v=>oy+v*s;
-  if (flat) {
-    const artH=h*.9, artW=artH/.75, left=X(330), right=x+w-8*s;
-    out+=productPic(config.category,left+Math.max(0,(right-left-artW)/2),y+h*.05,artW,artH);
-  } else {
-    const artW=218*s;
-    out+=productPic(config.category,x+w-artW-10*s,Y(86),artW,artW*.75);
-  }
+  const s=Math.min(w/424,h/263), oy=y+(h-263*s)/2, X=v=>x+v*s, Y=v=>oy+v*s;
+  const artW=218*s;
+  out+=productPic(config.category,x+w-artW-10*s,Y(86),artW,artW*.75);
   out+=logo(X(32),Y(48),262*s);
   out+=rule(X(32),Y(115),X(160),1.5*s);
   out+=text(X(32),Y(178),config.model,fitFont(config.model,50*s,Math.max(185*s,w-300*s)),`${FONT} font-weight="600" fill="#151515"`);
   out+=rule(X(32),Y(lines.length>1?198:194),X(160),1.5*s);
   lines.forEach((t,i)=>out+=text(X(32),Y((lines.length>1?224:222)+i*27),t,22*s,`${FONT} fill="#1d1d1d"`));
-  return `<g>${out}</g>`;
+  return `<g data-layout="landscape">${out}</g>`;
 }
 
-/** Back panel: the supplied brand block, centred (reference unit box 379 × 263). */
+function bearingSeal(x,y,size) {
+  const cx=x+size/2,cy=y+size/2;
+  let out=`<g fill="none" stroke="#171717" stroke-width="${n(size*.05)}"><circle cx="${n(cx)}" cy="${n(cy)}" r="${n(size*.395)}"/><circle cx="${n(cx)}" cy="${n(cy)}" r="${n(size*.195)}"/>`;
+  for(let i=0;i<8;i++) {
+    const a=i*Math.PI/4;
+    out+=`<circle cx="${n(cx+size*.29*Math.cos(a))}" cy="${n(cy+size*.29*Math.sin(a))}" r="${n(size*.047)}" fill="#171717" stroke="none"/>`;
+  }
+  return out+'</g>';
+}
+
+// Wide cartons reflow brand elements instead of uniformly downscaling a square graphic.
 function backArtwork(config,x,y,w,h){
-  const {width,height}=ASSETS['back-panel'];
-  const bw=Math.min(w*.88,h*.86*width/height), bh=bw*height/width;
-  return `<use href="#back-panel" x="${n(x+(w-bw)/2)}" y="${n(y+(h-bh)/2)}" width="${n(bw)}" height="${n(bh)}"/>`;
+  if (getLayoutProfile(w,h)!=='wide') {
+    const {width,height}=ASSETS['back-panel'];
+    const bw=Math.min(w*.88,h*.86*width/height), bh=bw*height/width;
+    return `<use href="#back-panel" x="${n(x+(w-bw)/2)}" y="${n(y+(h-bh)/2)}" width="${n(bw)}" height="${n(bh)}"/>`;
+  }
+  const size=h*.335, markW=Math.min(w*.445,h*1.9), spacing=h*.11;
+  const markX=(w-size-markW-spacing)/2, markY=h*.14;
+  const title='CORROSION-RESISTANT', desc='BEARINGS & MOTION COMPONENTS';
+  return `<svg x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" viewBox="0 0 ${n(w)} ${n(h)}" overflow="hidden" data-layout="wide-back">
+    <rect x="${n(w*.067)}" y="${n(h*.045)}" width="${n(w*.866)}" height="${n(h*.91)}" rx="${n(h*.042)}" fill="none" stroke="#171717" stroke-width="${n(h*.012)}"/>
+    ${bearingSeal(markX,markY,size)}
+    ${logo(markX+size+spacing,markY+size*.12,markW,{color:'#151515'})}
+    ${rule(w*.23,h*.533,w*.77,h*.0078)}
+    ${text(w*.5,h*.669,title,fitFont(title,h*.151,w*.80,.57),`${FONT} font-weight="800" text-anchor="middle" fill="#141414"`)}
+    ${text(w*.5,h*.766,desc,fitFont(desc,h*.094,w*.80,.53),`${FONT} text-anchor="middle" fill="#141414"`)}
+    ${text(w*.5,h*.848,'www.linoxbearing.com',fitFont('www.linoxbearing.com',h*.08,w*.75,.51),`${FONT} text-anchor="middle" fill="#141414"`)}
+    ${text(w*.5,h*.929,'ISO9001:2015 · MADE IN CHINA',fitFont('ISO9001:2015 · MADE IN CHINA',h*.071,w*.76,.53),`${FONT} text-anchor="middle" fill="#141414"`)}
+  </svg>`;
 }
 
 /**
