@@ -85,19 +85,34 @@ test('square packages retain existing art templates',()=>{
   }
 });
 
-test('wide SI15C typography and back-panel retain reference hierarchy',()=>{
+test('long carton keeps bold front and uses the original compact badge',()=>{
   const art=createFlatSvg(PRESETS.SI15C);
   const front=art.split('data-layout="wide"')[1]?.split('</svg>')[0];
   const back=art.split('data-layout="wide-back"')[1]?.split('</svg>')[0];
   assert.ok(front && back);
-  assert.doesNotMatch(front,/stroke="#1a1a1a" stroke-width="/);
   assert.match(front,/font-weight="900"/);
-  assert.match(back,/CORROSION-RESISTANT/);
-  assert.match(back,/font-weight="900"/);
-  assert.match(back,/ISO9001:2015/);
-  assert.match(back,/MADE IN CHINA/);
+  assert.match(front,/data-layer="diagonal-branding"/);
+  assert.doesNotMatch(front,/stroke="#1a1a1a" stroke-width="/);
+  assert.match(back,/href="#back-panel"/);
+  assert.match(back,/data-brand-badge="compact"/);
+  assert.match(back,/data-layer="diagonal-branding"/);
+  assert.doesNotMatch(back,/CORROSION-RESISTANT/);
+  const bw=Number(back.match(/data-badge-width="([0-9.]+)"/)?.[1]);
+  const bh=Number(back.match(/data-badge-height="([0-9.]+)"/)?.[1]);
+  assert.ok(bw>0 && bw/PRESETS.SI15C.length<.45);
+  assert.ok(bh>0 && bh/PRESETS.SI15C.width<=.82);
   assert.match(art,/®/);
   assert.doesNotMatch(markup(art),/NaN|undefined/);
+});
+test('decoration and open-box printing are present in presentation exports',async()=>{
+  const {createPresentationSvg}=await import('../src/presentation.js');
+  for(const config of [PRESETS.SI15C,PRESETS.GE17C,PRESETS['S6004-2RS']]){
+    const out=createPresentationSvg(config);
+    assert.match(out,/data-layer="diagonal-branding"/);
+    assert.match(out,/data-open-box-print="true"/);
+    assert.match(out,/href="#back-panel"/);
+    assert.doesNotMatch(markup(out),/NaN|undefined/);
+  }
 });
 test('square back labels still use their fixed original graphic',()=>{
   for(const item of [PRESETS.GE17C,PRESETS['S6004-2RS']]){
