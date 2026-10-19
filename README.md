@@ -16,7 +16,8 @@
 - 两种尺寸模式：直接输入名义纸盒外尺寸；或输入产品外尺寸并给每个方向加上总余量（默认加 2 mm）。
 - 自动生成：前/后/侧三视图、3D 闭盒矢量示意、纸盒展开刀模。展平展开使用标准毫米 SVG `width/height` 与 `viewBox`。
 - 默认预览（效果展示）按参考稿版式绘制：灰色台面上的正面/背面/侧面 + 开盒示意，下方为刀模。所有面、开盒和刀模均按真实长宽高比例绘制（各区域分别缩放适配画面）；生产用的精确毫米刀模请用“刀模 SVG”导出。
-- 字体：Barlow（SIL OFL 1.1，`assets/fonts/`），400/600 两个字重以 woff2 内嵌进 SVG，不依赖本机字体。送印前仍建议在 AI/CorelDRAW 中转曲。
+- 印刷字体可选 8 款：Barlow（默认）、Barlow Semi Condensed、Arimo（与 Arial/Helvetica 同宽）、Roboto、Source Sans 3、Archivo、Montserrat、Oswald。均为 SIL OFL 或 Apache 2.0 授权，可商用，许可文件在 `assets/fonts/*-LICENSE.txt`。导出的 SVG 只内嵌所选字体的 3 个字重（woff2），不依赖本机字体；送印前仍建议在 AI/CorelDRAW 中转曲。
+- 排版按字体真实字宽计算（`src/font-metrics.js`），正面文字不会与产品图重叠。新增字体时：放入 woff2 文件，在 `src/fonts.js` 登记，再用 `scripts/measure-fonts.html`（本地服务器下打开）重新生成字宽数据。
 - 分组 `<g id="cut">` 红色裁切、`<g id="crease">` 青色压痕、`<g id="print">` 印刷。浏览器打印按钮提供保存为 PDF 工作流程。
 - 导出 SVG、导入/导出 JSON 配置；浏览器本地自动保存输入数据。
 - 包含 Node 内置测试：`npm test`（无需安装 NPM 依赖）。
@@ -42,6 +43,8 @@ src/
   geometry.js  # mm-based flat dieline cut/fold geometry + validators
   artwork.js   # print artwork (front/back/side layouts) and elevations
   assets.js        # generated: product images + back-panel block as data URIs
+  fonts.js         # print font registry, @font-face (embedded / URL), text measuring
+  font-metrics.js  # per-font glyph widths and cap heights
 assets/            # source PNGs (run `npm run assets` after replacing)
 scripts/build-assets.mjs
   presentation.js  # reference-style presentation board

@@ -4,6 +4,8 @@
  * opposed tuck lids. This is NOT a production-approved die until converter
  * compensation, tooling and tolerances are validated with a carton supplier.
  */
+import { FONTS, DEFAULT_FONT } from './fonts.js';
+
 export const CATEGORY = Object.freeze({
   rod: { label: 'Rod End', illustration: 'rod', description: '杆端关节轴承' },
   radial: { label: 'Radial Spherical Plain Bearing', illustration: 'radial', description: '向心关节轴承' },
@@ -30,8 +32,10 @@ export function normalizeInput(input) {
   if (!CATEGORY[category]) throw new Error('请选择支持的产品分类');
   if (!dims.every(v => isValidNumber(v) && v >= 8 && v <= 600)) throw new Error('长宽高必须在 8–600 mm 之间');
   if (!Number.isFinite(allowance) || allowance < 0 || allowance > 30) throw new Error('余量必须在 0–30 mm 之间');
+  const font = input.font ?? DEFAULT_FONT;
+  if (!FONTS[font]) throw new Error('请选择支持的印刷字体');
   const sizes = input.mode === 'product' ? dims.map(v => v + allowance) : dims;
-  return { model, category, length: round(sizes[0]), width: round(sizes[1]), depth: round(sizes[2]), mode: input.mode === 'product' ? 'product' : 'box', allowance };
+  return { model, category, length: round(sizes[0]), width: round(sizes[1]), depth: round(sizes[2]), mode: input.mode === 'product' ? 'product' : 'box', allowance, font };
 }
 
 /**

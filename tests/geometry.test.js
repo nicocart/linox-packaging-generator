@@ -6,6 +6,30 @@ import {createFlatSvg,createViewsSvg,createIsoSvg} from '../src/artwork.js';
 // Embedded base64 images/fonts may contain "NaN" by chance; check markup only.
 const markup=svg=>svg.replace(/data:[^"')]+/g,'');
 
+// Exports embed the chosen font; in Node, feed the woff2 files from disk.
+import {readFileSync} from 'node:fs';
+import {FONTS, registerFontData, fontAttrs, textWidth, capHeight} from '../src/fonts.js';
+for(const [key,{weights}] of Object.entries(FONTS))
+  for(const w of Object.values(weights))
+    registerFontData(key,w,readFileSync(new URL(`../assets/fonts/${key}-${w}.woff2`,import.meta.url)).toString('base64'));
+
+/** Minimal XML well-formedness check for generated SVG: quoted attributes, balanced tags, escaped text. */
+function assertWellFormed(svg,name){
+  const stack=[];
+  const tag=/<(\/?)([A-Za-z][\w:.-]*)((?:\s+[\w:.-]+="[^"<]*")*)\s*(\/?)>|<([^>]*)>/g;
+  let m,last=0;
+  while((m=tag.exec(svg))){
+    const between=svg.slice(last,m.index);
+    assert.doesNotMatch(between,/&(?!(amp|lt|gt|quot|apos|#\d+);)/,`${name}: unescaped & near ${m.index}`);
+    last=tag.lastIndex;
+    if(m[5]!==undefined) assert.fail(`${name}: malformed tag <${m[5].slice(0,80)}>`);
+    if(m[4]) continue;
+    if(m[1]){ assert.equal(stack.pop(),m[2],`${name}: unbalanced </${m[2]}>`); }
+    else stack.push(m[2]);
+  }
+  assert.deepEqual(stack,[],`${name}: unclosed tags`);
+}
+
 test('packaging dimensions reflect preset input',()=>{
   for(const item of Object.values(PRESETS)){
     const d=createDieline(item);
@@ -90,7 +114,7 @@ test('long carton keeps bold front and uses the original compact badge',()=>{
   const front=art.split('data-layout="wide"')[1]?.split('</svg>')[0];
   const back=art.split('data-layout="wide-back"')[1]?.split('</svg>')[0];
   assert.ok(front && back);
-  assert.match(front,/font-weight="900"/);
+  assert.match(front,/data-role="model"/);
   assert.match(front,/data-layer="bearing-watermark"/);
   assert.doesNotMatch(front,/stroke="#1a1a1a" stroke-width="/);
   assert.match(back,/href="#back-panel"/);
@@ -128,7 +152,7 @@ test('all categories share one SI15C-derived front and back layout',()=>{
     const svg=createFlatSvg(item);
     const names=[...svg.matchAll(/data-template="si15c-master"/g)];
     assert.equal(names.length,2);
-    assert.match(svg,/font-weight="900"/);
+    assert.match(svg,new RegExp(fontAttrs('barlow','heavy')));
     assert.equal([...svg.matchAll(/data-layer="bearing-watermark"/g)].length,2);
     assert.match(svg,/data-brand-badge="compact"/);
     assert.doesNotMatch(svg,/data-layer="diagonal-branding"/);
@@ -142,5 +166,70 @@ test('the application displays one full preview, not alternate view tabs',async(
   assert.match(html,/下载|导出/);
   assert.doesNotMatch(html,/data-tab=|class="tabs"/);
   assert.doesNotMatch(app,/activeTab|createIsoSvg|createViewsSvg/);
-  assert.match(app,/const output=createPresentationSvg\(raw\)/);
+  assert.match(app,/const output=createPresentationSvg\(raw[,)]/);
+});
+
+test('every downloadable SVG is well-formed XML for every preset and font',async()=>{
+  const {createPresentationSvg}=await import('../src/presentation.js');
+  for(const item of Object.values(PRESETS)) for(const font of Object.keys(FONTS)){
+    const cfg={...item,font};
+    for(const [name,svg] of [['presentation',createPresentationSvg(cfg)],['dieline',createFlatSvg(cfg)],['views',createViewsSvg(cfg)],['iso',createIsoSvg(cfg)]])
+      assertWellFormed(svg,`${item.model}/${font}/${name}`);
+  }
+});
+test('exports use only the chosen embedded font, never system fonts',async()=>{
+  const {createPresentationSvg}=await import('../src/presentation.js');
+  for(const font of Object.keys(FONTS)){
+    const cfg={...PRESETS.GE17C,font};
+    for(const svg of [createPresentationSvg(cfg),createFlatSvg(cfg)]){
+      const families=new Set([...markup(svg).matchAll(/font-family="([^"]+)"/g)].map(m=>m[1]));
+      assert.deepEqual([...families],[`'LINOX ${FONTS[font].label}',sans-serif`]);
+      for(const w of Object.values(FONTS[font].weights))
+        assert.ok(svg.includes(`font-family:'LINOX ${FONTS[font].label}';font-weight:${w};src:url(data:font/woff2;base64,`),`${font} ${w} not embedded`);
+      assert.doesNotMatch(markup(svg),/Arial|Helvetica|Segoe/);
+    }
+  }
+});
+test('unknown fonts are rejected and the default is Barlow',()=>{
+  assert.equal(normalizeInput(PRESETS.SI15C).font,'barlow');
+  assert.throws(()=>normalizeInput({...PRESETS.SI15C,font:'comic-sans'}));
+});
+
+/** Front-panel text and drawing boxes, read back from the generated SVG. */
+function frontBoxes(cfg){
+  const svg=createFlatSvg(cfg);
+  const front=svg.slice(svg.indexOf('data-template="si15c-master"'));
+  const num=(s,k)=>Number(s.match(new RegExp(`${k}="([-0-9.]+)"`))[1]);
+  const pic=front.match(/<use href="#pic-[^>]+>/)[0];
+  const texts=[...front.matchAll(/<text ([^>]+)>([^<]*)<\/text>/g)].filter(t=>/data-role/.test(t[1]));
+  const roleOf=a=>a.match(/data-role="(\w+)"/)[1];
+  const lines=texts.map(([,a,str])=>{
+    const role=roleOf(a)==='model'?'heavy':'medium', size=num(a,'font-size'), x=num(a,'x'), y=num(a,'y');
+    return {role:roleOf(a),x,y,w:textWidth(str,cfg.font,role,size),cap:capHeight(cfg.font,role,size),size};
+  });
+  return {pic:{x:num(pic,'x'),y:num(pic,'y'),w:num(pic,'width'),h:num(pic,'height')},lines};
+}
+test('front text never overlaps the product drawing',()=>{
+  const sizes=[[83,23,16],[32,32,16],[46,46,15],[60,40,20],[40,60,20],[30,30,30]];
+  const models=['SI15C','GE17C','S6004-2RS','GEG120ES-2RS'];
+  for(const font of Object.keys(FONTS)) for(const [length,width,depth] of sizes) for(const model of models){
+    const cfg={model,category:'radial',length,width,depth,font};
+    const {pic,lines}=frontBoxes(cfg);
+    for(const l of lines){
+      const overlapX=l.x+l.w>pic.x && l.x<pic.x+pic.w;
+      const overlapY=l.y>pic.y && l.y-l.cap<pic.y+pic.h;
+      assert.ok(!(overlapX&&overlapY),`${font} ${model} ${length}x${width}: ${l.role} overlaps drawing`);
+      assert.ok(l.x+l.w<=length+1e-6,`${font} ${model} ${length}x${width}: ${l.role} runs off the panel`);
+    }
+  }
+});
+test('square fronts keep compact line spacing',()=>{
+  for(const [length,width] of [[32,32],[46,46],[40,46]]){
+    const {lines}=frontBoxes({...PRESETS.GE17C,length,width,depth:16,font:'barlow'});
+    const model=lines.find(l=>l.role==='model'), subs=lines.filter(l=>l.role==='category');
+    // Gap from model baseline to the first category cap line, relative to model cap height.
+    const gap=(subs[0].y-subs[0].cap-model.y)/model.cap;
+    assert.ok(gap>.3 && gap<.8,`${length}x${width}: model→category gap ${gap.toFixed(2)}× cap`);
+    if(subs.length>1) assert.ok((subs[1].y-subs[0].y)/subs[0].size<1.4,'category line pitch too loose');
+  }
 });

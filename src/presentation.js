@@ -1,5 +1,6 @@
 import { normalizeInput } from './geometry.js';
-import { artDefs, createFlatSvg, productArtworkForPreview, previewFaceArtwork } from './artwork.js';
+import { artDefs, createFlatSvg, logo, productArtworkForPreview, previewFaceArtwork } from './artwork.js';
+import { fontAttrs } from './fonts.js';
 
 /*
  * Presentation board in the layout of the approved reference sheets: front,
@@ -9,8 +10,9 @@ import { artDefs, createFlatSvg, productArtworkForPreview, previewFaceArtwork } 
  */
 const v=n=>Number(n.toFixed(2));
 const esc=s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
-const FONT=`font-family="Barlow,'Segoe UI',Arial,sans-serif"`;
-const label=(x,y,s,{size=20,color='#2a2a2a',anchor='middle',weight='400',extra=''}={})=>`<text x="${v(x)}" y="${v(y)}" fill="${color}" ${FONT} font-size="${size}" font-weight="${weight}" text-anchor="${anchor}" ${extra}>${esc(s)}</text>`;
+// Annotation text in the chosen print font (regular weight).
+let labelFont='barlow';
+const label=(x,y,s,{size=20,color='#2a2a2a',anchor='middle',extra=''}={})=>`<text x="${v(x)}" y="${v(y)}" fill="${color}" ${fontAttrs(labelFont,'regular')} font-size="${size}" text-anchor="${anchor}" ${extra}>${esc(s)}</text>`;
 
 const PAGE_W=1448, PAGE_H=1086, STAGE_H=520;
 // Stage regions in page px: closed faces on the left, opened carton on the right.
@@ -76,13 +78,13 @@ function openCarton(config){
   const left=poly([P(0,0,0),P(0,D,0),P(0,D,H),P(0,0,H)],'fill="#cfd0d2"');
   const floor=poly([P(0,0,0),P(L,0,0),P(L,D,0),P(0,D,0)],'fill="#e6e6e7"');
   const front=poly([P(0,0,0),P(L,0,0),P(L,0,H),P(0,0,H)],'fill="url(#wallFront)" stroke="#a5a6a9" stroke-width="1.2" stroke-linejoin="round"');
-  // Project an actual printed face onto the upright front wall of the open carton.
-  // The side and interior remain dimensionally generated; no AI graphics.
+  // The front wall is only L × H (carton depth), much flatter than the front
+  // face, so it carries a small centred wordmark instead of a squeezed copy
+  // of the front artwork.
   const [faceOX,faceOY]=P(0,0,H);
-  // Open-carton printing uses the same SI15C master front artwork as the
-  // primary view and dieline; no independently hard-coded graphics.
+  const markW=Math.min(L*.36,H*.42/.17), markH=markW*.17;
   const frontPrint=`<g data-open-box-print="true" transform="matrix(${v(ex[0])} ${v(ex[1])} 0 1 ${v(faceOX)} ${v(faceOY)})">
-    ${previewFaceArtwork(config,'front',L,H)}
+    ${logo((L-markW)/2,(H-markH)/2,markW,{font:config.font})}
   </g>`;
 
   const right=poly([P(L,0,0),P(L,D,0),P(L,D,H),P(L,0,H)],'fill="url(#wallSide)" stroke="#a5a6a9" stroke-width="1.2" stroke-linejoin="round"');
@@ -104,8 +106,9 @@ function openCarton(config){
   return `<g>${shadow}${lid}${lidTuck}${back}${left}${floor}${bag}${product}${film}${crinkle}${front}${frontPrint}${right}${rim}</g>`;
 }
 
-export function createPresentationSvg(raw){
+export function createPresentationSvg(raw,{embedFonts=true}={}){
   const c=normalizeInput(raw);
+  labelFont=c.font;
   // One px-per-mm scale for all three faces, so they keep the real L : W : H.
   const k=Math.min((FACES.right-FACES.left-2*FACES.gap)/(2*c.length+c.depth), FACES.maxH/c.width);
   const fw=c.length*k, fh=c.width*k, sw=c.depth*k;
@@ -121,7 +124,7 @@ export function createPresentationSvg(raw){
   ${openCarton(c)}`;
 
   // Printed dieline from the same geometry and artwork code as the production export.
-  const flat=createFlatSvg(raw,{withDimensions:false,style:'presentation'});
+  const flat=createFlatSvg(raw,{withDimensions:false,style:'presentation',embedFonts:false});
   const vb=flat.match(/viewBox="([^"]+)"/)[1].split(' ').map(Number);
   const inner=flat.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'').replace(/<title>[\s\S]*?<\/title>/,'').replace(/<desc>[\s\S]*?<\/desc>/,'').replace(/<defs>[\s\S]*?<\/defs>/,'');
   const areaW=PAGE_W-80, areaH=PAGE_H-STAGE_H-40;
@@ -142,5 +145,5 @@ export function createPresentationSvg(raw){
    <linearGradient id="bagGrad" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e9eaec"/><stop offset=".5" stop-color="#cfd1d4"/><stop offset="1" stop-color="#e2e3e5"/></linearGradient>
    <linearGradient id="filmGrad" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".45"/><stop offset=".45" stop-color="#fff" stop-opacity=".08"/><stop offset="1" stop-color="#fff" stop-opacity=".35"/></linearGradient>
    <filter id="blur6" x="-20%" y="-200%" width="140%" height="500%"><feGaussianBlur stdDeviation="6"/></filter>
-  </defs>${artDefs(c.category)}${stage}${die}</svg>`;
+  </defs>${artDefs(c,{embedFonts})}${stage}${die}</svg>`;
 }

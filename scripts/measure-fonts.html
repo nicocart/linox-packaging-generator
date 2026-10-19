@@ -1,0 +1,20 @@
+<html><body><pre id="out">pending</pre><script>
+const specs={barlow:[400,600,800],'barlow-semi-condensed':[400,600,800],arimo:[400,600,700],roboto:[400,500,900],'source-sans-3':[400,600,900],archivo:[400,600,800],montserrat:[400,600,800],oswald:[400,500,700]};
+(async()=>{
+  const res={};
+  const ctx=document.createElement('canvas').getContext('2d');
+  for(const [k,ws] of Object.entries(specs)){
+    res[k]={};
+    for(const w of ws){
+      const fam=`M-${k}-${w}`;
+      const ff=new FontFace(fam,`url(../assets/fonts/${k}-${w}.woff2)`);
+      await ff.load(); document.fonts.add(ff);
+      ctx.font=`1000px "${fam}"`;
+      const adv=[];for(let c=32;c<127;c++)adv.push(Math.round(ctx.measureText(String.fromCharCode(c)).width));
+      const H=ctx.measureText('H');
+      res[k][w]={adv,cap:Math.round(H.actualBoundingBoxAscent),reg:Math.round(ctx.measureText('®').width)};
+    }
+  }
+  document.getElementById('out').textContent=JSON.stringify(res);
+})().catch(e=>document.getElementById('out').textContent='ERR '+e);
+</script></body></html>

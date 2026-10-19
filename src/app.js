@@ -1,11 +1,14 @@
 import { CATEGORY, PRESETS, normalizeInput, assessLayout } from './geometry.js';
 import { createFlatSvg } from './artwork.js';
 import { createPresentationSvg } from './presentation.js';
+import { FONTS, DEFAULT_FONT, loadFontData } from './fonts.js';
 
 const $=id=>document.getElementById(id);
 const form=$('params');
-const fields=['model','category','length','width','depth','allowance'];
+const fields=['model','category','font','length','width','depth','allowance'];
 let pending=null;
+
+$('font').replaceChildren(...Object.entries(FONTS).map(([key,{label,note}])=>new Option(`${label} · ${note}`,key,key===DEFAULT_FONT,key===DEFAULT_FONT)));
 
 function currentRaw() {
   return Object.fromEntries([...fields.map(x=>[x,form.elements.namedItem(x).value]),['mode',form.elements.namedItem('mode').value]]);
@@ -24,7 +27,8 @@ function updateSizing() {
 function render() {
   try {
     const raw=currentRaw(), conf=normalizeInput(raw);
-    const output=createPresentationSvg(raw);
+    // Live preview loads fonts by URL; downloads embed them (see exportWith).
+    const output=createPresentationSvg(raw,{embedFonts:false});
     $('drawing').innerHTML=output;
     $('summary-model').textContent=conf.model;
     $('summary-category').textContent=CATEGORY[conf.category].label;
@@ -56,6 +60,15 @@ function download(name,text,mime) {
   setTimeout(()=>URL.revokeObjectURL(href),1000);
 }
 function safely(action) {try { if (pending) throw pending; action(currentRaw()); } catch(e) {toast(e.message);} }
+/** Downloads and print embed the chosen font, so fetch its files first. */
+async function exportWith(action) {
+  try {
+    if (pending) throw pending;
+    const raw=currentRaw();
+    await loadFontData(normalizeInput(raw).font);
+    action(raw);
+  } catch(e) { toast(e.message); }
+}
 function filename(raw,type,ext) {
   const c=normalizeInput(raw);
   return `LINOX_${c.model.replace(/[^a-zA-Z0-9_-]/g,'_')}_${type}_${c.length}x${c.width}x${c.depth}mm.${ext}`;
@@ -65,10 +78,10 @@ document.querySelectorAll('.preset').forEach(btn=>btn.addEventListener('click',(
 form.addEventListener('input',()=>{updateSizing();render();});
 form.addEventListener('change',()=>{updateSizing();render();});
 form.addEventListener('submit',e=>e.preventDefault());
-$('download-presentation').addEventListener('click',()=>safely(raw=>download(filename(raw,'presentation','svg'),createPresentationSvg(raw),'image/svg+xml;charset=utf-8')));
-$('download-flat').addEventListener('click',()=>safely(raw=>download(filename(raw,'dieline','svg'),createFlatSvg(raw),'image/svg+xml;charset=utf-8')));
+$('download-presentation').addEventListener('click',()=>exportWith(raw=>download(filename(raw,'presentation','svg'),createPresentationSvg(raw),'image/svg+xml;charset=utf-8')));
+$('download-flat').addEventListener('click',()=>exportWith(raw=>download(filename(raw,'dieline','svg'),createFlatSvg(raw),'image/svg+xml;charset=utf-8')));
 $('download-json').addEventListener('click',()=>safely(raw=>download(filename(raw,'config','json'),JSON.stringify({schema:1,...raw},null,2),'application/json;charset=utf-8')));
-$('print-pdf').addEventListener('click',()=>safely(raw=>{$('print-sheet').innerHTML=createFlatSvg(raw);window.print();}));
+$('print-pdf').addEventListener('click',()=>exportWith(raw=>{$('print-sheet').innerHTML=createFlatSvg(raw);window.print();}));
 $('load-json').addEventListener('click',()=>$('json-file').click());
 $('json-file').addEventListener('change',async e=>{
   const file=e.target.files?.[0];if(!file)return;
