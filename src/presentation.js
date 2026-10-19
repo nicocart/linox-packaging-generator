@@ -1,5 +1,5 @@
 import { normalizeInput } from './geometry.js';
-import { artDefs, createFlatSvg, productArtworkForPreview, previewFaceArtwork } from './artwork.js';
+import { artDefs, createFlatSvg, productArtworkForPreview, previewFaceArtwork, logo } from './artwork.js';
 
 /*
  * Presentation board in the layout of the approved reference sheets: front,
@@ -76,6 +76,26 @@ function openCarton(config){
   const left=poly([P(0,0,0),P(0,D,0),P(0,D,H),P(0,0,H)],'fill="#cfd0d2"');
   const floor=poly([P(0,0,0),P(L,0,0),P(L,D,0),P(0,D,0)],'fill="#e6e6e7"');
   const front=poly([P(0,0,0),P(L,0,0),P(L,0,H),P(0,0,H)],'fill="url(#wallFront)" stroke="#a5a6a9" stroke-width="1.2" stroke-linejoin="round"');
+  // Project an actual printed face onto the upright front wall of the open carton.
+  // The side and interior remain dimensionally generated; no AI graphics.
+  const [faceOX,faceOY]=P(0,0,H);
+  const faceMarkW=Math.min(L*.365,H*1.39);
+  const faceModelSize=Math.min(H*.226,L*.095);
+  const frontPrint=`<g transform="matrix(${v(ex[0])} ${v(ex[1])} 0 1 ${v(faceOX)} ${v(faceOY)})">
+    <svg width="${v(L)}" height="${v(H)}" viewBox="0 0 ${v(L)} ${v(H)}" overflow="hidden">
+      <g fill="#cbd0d6" pointer-events="none">
+        <polygon points="${v(L*.37)},${v(H)} ${v(L*.45)},${v(H)} ${v(L*.68)},0 ${v(L*.60)},0" opacity=".28"/>
+        <polygon points="${v(L*.73)},${v(H)} ${v(L*.95)},${v(H)} ${v(L*1.12)},0 ${v(L*.90)},0" opacity=".32"/>
+      </g>
+      ${logo(L*.05,H*.13,faceMarkW)}
+      ${label(L*.05,H*.67,config.model,{size:faceModelSize,color:'#121212',anchor:'start',weight:'800'})}
+      ${label(L*.05,H*.88,config.category==='rod'?'Rod End':config.category==='radial'?'Spherical Plain':'Deep Groove',{size:H*.112,color:'#242424',anchor:'start'})}
+      <g transform="translate(${v(L*.61)} ${v(H*.07)})">
+        ${productArtworkForPreview(config.category,L*.33,H*.74,{shaded:false})}
+      </g>
+    </svg>
+  </g>`;
+
   const right=poly([P(L,0,0),P(L,D,0),P(L,D,H),P(L,0,H)],'fill="url(#wallSide)" stroke="#a5a6a9" stroke-width="1.2" stroke-linejoin="round"');
   const rim=`<path d="M${P(0,0,H).map(v)}L${P(L,0,H).map(v)}L${P(L,D,H).map(v)}" fill="none" stroke="#fff" stroke-width="2.4"/>`;
   // Poly bag filling the opening, with crinkle highlights.
@@ -92,7 +112,7 @@ function openCarton(config){
   const product=`<g transform="translate(${v(cx-pw/2)} ${v(cy-ph/2)})">${productArtworkForPreview(config.category,pw,ph,{shaded:true})}</g>`;
   const film=`<path d="${bagPath}" fill="url(#filmGrad)"/>`;
   const shadow=`<ellipse cx="${v(P(L*.55,D*.3,0)[0])}" cy="${v(P(L*.5,0,0)[1]+10)}" rx="${v(L*.6)}" ry="14" fill="#1d1f22" opacity=".2" filter="url(#blur6)"/>`;
-  return `<g>${shadow}${lid}${lidTuck}${back}${left}${floor}${bag}${product}${film}${crinkle}${front}${right}${rim}</g>`;
+  return `<g>${shadow}${lid}${lidTuck}${back}${left}${floor}${bag}${product}${film}${crinkle}${front}${frontPrint}${right}${rim}</g>`;
 }
 
 export function createPresentationSvg(raw){
