@@ -166,7 +166,8 @@ test('the application displays one full preview, not alternate view tabs',async(
   const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
   const app=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
   assert.match(html,/id="drawing"/);
-  assert.match(html,/id="batch-input"/);
+  assert.match(html,/id="batch-rows"/);
+  assert.match(html,/id="batch-add"/);
   assert.match(html,/id="batch-export"/);
   assert.match(html,/下载|导出/);
   assert.doesNotMatch(html,/data-tab=|class="tabs"/);

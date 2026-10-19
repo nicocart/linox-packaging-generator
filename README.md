@@ -20,25 +20,17 @@
 - 排版按字体真实字宽计算（`src/font-metrics.js`），正面的型号与分类分别按各自字体测量，正面文字不会与产品图重叠。同一长宽比的面板共用一套比例化字阶：LOGO、型号、分类随面板尺寸缩放；超长型号优先在连字符处换行，避免把整块文字缩小。如需更换固定字体：修改 `src/fonts.js` 的 `MODEL_FONT` / `CATEGORY_FONT`，并确保对应 woff2 与 `scripts/measure-fonts.html` 生成的字宽数据齐全。
 - 分组 `<g id="cut">` 红色裁切、`<g id="crease">` 青色压痕、`<g id="print">` 印刷。浏览器打印按钮把彩色效果展示图居中输出为 A3 横向页面，可另存为 PDF。
 - 导出 SVG、导入/导出 JSON 配置；浏览器本地自动保存输入数据。
-- 批量生成：粘贴多行「型号, 分类, 长, 宽, 高, 余量(可选)」，默认按产品尺寸 + 3 mm 余量计算；点击任一行可载入单件全景预览；批量导出压缩包内含效果图、刀模图和 `清单.csv`。
+- 批量生成：每行直接输入型号、选择分类、输入长宽高和余量（默认 3 mm，可按行修改）；点击任一行可载入单件全景预览；批量导出压缩包内含效果图、刀模图和 `清单.csv`。
 - 包含 Node 内置测试：`npm test`（无需安装 NPM 依赖）。
 
 ## 批量生成
 
-批量输入每行一条，逗号、中文逗号、分号或 Tab 分隔均可：
-
-```text
-# 型号, 分类, 长, 宽, 高, 余量(可选)
-SI15C, 杆端, 80, 20, 13
-GE17C, 向心, 29, 29, 13
-S6004-2RS, 深沟, 43, 43, 12, 4
-```
-
-- 默认按产品尺寸 + 余量生成，默认余量 3 mm，可在第六列单独覆盖；
-- 分类支持 `杆端 / 向心 / 深沟`，也兼容 `Rod End / Radial / Deep Groove` 和 `rod / radial / deep`；
-- 支持可选的表头行和 `#` 注释；无效行会在列表中单独提示，不阻塞其他行；
-- 点击列表中的「预览」会把该行载入下方单件预览；
-- 「批量导出压缩包」会生成 `效果图/`、`刀模/` 和 `清单.csv`，内容全部在浏览器本地生成。
+- 每行包含：型号输入框、分类下拉框、长/宽/高数字输入、余量输入（默认 3 mm）；
+- 默认按“产品尺寸 + 余量”计算，可逐行修改余量；
+- 点“新增一行”追加空行，点“删除”移除该行；空行会被忽略；
+- 无效行会在行内提示错误，不阻塞其他有效行；
+- 点击行内“预览”会把该行载入下方单件全景预览；
+- “批量导出压缩包”会生成 `效果图/`、`刀模/` 和 `清单.csv`，内容全部在浏览器本地生成。
 
 ## 重要限制：正式生产前必须打样
 
@@ -58,7 +50,6 @@ S6004-2RS, 深沟, 43, 43, 12, 4
 index.html
 src/
   app.js       # browser UI and local export/import
-  batch.js     # batch row parsing and category aliases
   zip.js       # dependency-free ZIP writer for batch downloads
   geometry.js  # mm-based flat dieline cut/fold geometry + validators
   artwork.js   # print artwork (front/back/side layouts) and elevations
@@ -71,7 +62,6 @@ scripts/build-assets.mjs
   styles.css   # desktop/mobile interface and print layout
 tests/
   geometry.test.js
-  batch.test.js
   zip.test.js
 .github/workflows/test.yml
 ```

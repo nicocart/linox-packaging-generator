@@ -2,14 +2,13 @@ import { CATEGORY, PRESETS, normalizeInput, assessLayout } from './geometry.js';
 import { createFlatSvg } from './artwork.js';
 import { createPresentationSvg } from './presentation.js';
 import { loadFontDataFor } from './fonts.js';
-import { parseBatch } from './batch.js';
 import { createZipBlob } from './zip.js';
 
 const $=id=>document.getElementById(id);
 const form=$('params');
 const fields=['model','category','length','width','depth','allowance'];
 let pending=null;
-const batch={items:[],errors:[],active:null};
+const batch={rows:[],items:[],activeId:null,nextId:1};
 
 function currentRaw() {
   return Object.fromEntries([...fields.map(x=>[x,form.elements.namedItem(x).value]),['mode',form.elements.namedItem('mode').value]]);
@@ -81,60 +80,118 @@ function makeElement(tag,className,text){
   if(text!==undefined) element.textContent=text;
   return element;
 }
+function batchRaw(row){
+  return {
+    model:row.model.value.trim(),
+    category:row.category.value,
+    length:Number(row.length.value),
+    width:Number(row.width.value),
+    depth:Number(row.depth.value),
+    mode:'product',
+    allowance:row.allowance.value.trim()===''?3:Number(row.allowance.value),
+  };
+}
+function batchSource(raw){
+  if(!raw) return '';
+  return [raw.model,CATEGORY[raw.category]?.description??'',raw.length,raw.width,raw.depth,raw.allowance].join(', ');
+}
 function refreshBatch(){
-  const rawAllowance=$('batch-allowance').value.trim();
-  const allowance=rawAllowance===''?3:Number(rawAllowance);
-  const parsed=parseBatch($('batch-input').value,{allowance:Number.isFinite(allowance)?allowance:3});
-  batch.items=parsed.items;
-  batch.errors=parsed.errors;
-  batch.active=null;
+  batch.items=[];
+  batch.rows.forEach((row,index)=>{
+    row.line=index+1;
+    const raw=batchRaw(row);
+    const blank=!raw.model&&!row.length.value&&!row.width.value&&!row.depth.value;
+    row.el.classList.toggle('active',batch.activeId===row.id);
+    if(blank){
+      row.raw=null;row.conf=null;row.error=null;
+      row.result.textContent='等待输入';
+      row.result.classList.remove('error');
+      row.el.classList.remove('error');
+      return;
+    }
+    row.raw=raw;
+    try{
+      row.conf=normalizeInput(raw);
+      row.error=null;
+      row.result.textContent=`→ ${row.conf.length} × ${row.conf.width} × ${row.conf.depth} mm（成品）`;
+      row.result.classList.remove('error');
+      row.el.classList.remove('error');
+      batch.items.push({raw,conf:row.conf,row});
+    }catch(error){
+      row.conf=null;row.error=error.message;
+      row.result.textContent=error.message;
+      row.result.classList.add('error');
+      row.el.classList.add('error');
+    }
+  });
+  const errors=batch.rows.filter(row=>row.error).length;
   const parts=[];
-  if(parsed.items.length) parts.push(`${parsed.items.length} 条可生成`);
-  if(parsed.errors.length) parts.push(`${parsed.errors.length} 条错误`);
+  if(batch.items.length) parts.push(`${batch.items.length} 条可生成`);
+  if(errors) parts.push(`${errors} 条错误`);
   $('batch-status').textContent=parts.length?parts.join(' · '):'还没有可用的数据行';
-  $('batch-export').disabled=parsed.items.length===0;
-  renderBatchList();
+  $('batch-export').disabled=batch.items.length===0;
+  $('batch-empty').hidden=batch.rows.length>0;
 }
-function renderBatchList(){
-  const list=$('batch-list');
-  list.replaceChildren();
-  if(!batch.items.length&&!batch.errors.length){
-    list.append(makeElement('div','batch-empty','按上面的格式粘贴多行数据，或先修改示例。'));
-    return;
+function addBatchRow(initial={},focus=false){
+  const id=batch.nextId++;
+  const el=makeElement('div','batch-item');
+  const fields=makeElement('div','batch-fields');
+  const field=(label,control)=>{
+    const wrap=makeElement('label','batch-field');
+    wrap.append(makeElement('span',undefined,label),control);
+    return wrap;
+  };
+  const model=document.createElement('input');
+  model.type='text';model.maxLength=40;model.placeholder='如 SI15C';model.value=initial.model??'';
+  const category=document.createElement('select');
+  category.append(...Object.entries(CATEGORY).map(([key,{description}])=>new Option(description,key)));
+  category.value=initial.category??'rod';
+  const numberInput=(value,placeholder,min=8,max=600)=>{
+    const input=document.createElement('input');
+    input.type='number';input.min=String(min);input.max=String(max);input.step='0.1';input.placeholder=placeholder;
+    if(value!==undefined) input.value=value;
+    return input;
+  };
+  const length=numberInput(initial.length,'如 80'),width=numberInput(initial.width,'如 20'),depth=numberInput(initial.depth,'如 13');
+  const allowance=numberInput(initial.allowance??3,'3',0,30);
+  fields.append(field('型号',model),field('分类',category),field('长',length),field('宽',width),field('高',depth),field('余量',allowance));
+  const foot=makeElement('div','batch-item-foot');
+  const result=makeElement('span','batch-result','等待输入');
+  const actions=makeElement('div','batch-actions');
+  const preview=makeElement('button','batch-preview','预览');preview.type='button';
+  const remove=makeElement('button','batch-remove','删除');remove.type='button';
+  actions.append(preview,remove);
+  foot.append(result,actions);
+  el.append(fields,foot);
+  const row={id,el,model,category,length,width,depth,allowance,result,line:0,raw:null,conf:null,error:null};
+  batch.rows.push(row);
+  $('batch-rows').append(el);
+  for(const control of [model,category,length,width,depth,allowance]){
+    control.addEventListener('input',refreshBatch);
+    control.addEventListener('change',refreshBatch);
   }
-  batch.items.forEach((item,index)=>{
-    const row=makeElement('div',`batch-row${batch.active===index?' active':''}`);
-    row.append(makeElement('span','batch-line',String(item.line)));
-    const model=makeElement('span','batch-model');
-    model.append(makeElement('b',undefined,item.conf.model));
-    model.append(makeElement('small',undefined,CATEGORY[item.conf.category].description));
-    row.append(model);
-    const dims=makeElement('span','batch-dims');
-    const source=makeElement('span',undefined,`${item.raw.length} × ${item.raw.width} × ${item.raw.depth} mm`);
-    source.append(makeElement('small',undefined,` + ${item.raw.allowance} mm 余量`));
-    dims.append(source);
-    dims.append(makeElement('span',undefined,`→ ${item.conf.length} × ${item.conf.width} × ${item.conf.depth} mm`));
-    row.append(dims);
-    row.append(makeElement('span','batch-allow',`余量 ${item.raw.allowance} mm`));
-    const preview=makeElement('button','batch-preview','预览');
-    preview.type='button';
-    preview.addEventListener('click',()=>previewBatchItem(item,index));
-    row.append(preview);
-    list.append(row);
-  });
-  batch.errors.forEach(error=>{
-    const row=makeElement('div','batch-row error');
-    row.append(makeElement('span','batch-line',String(error.line)));
-    row.append(makeElement('span','batch-error',error.message));
-    list.append(row);
-  });
+  preview.addEventListener('click',()=>previewBatchRow(id));
+  remove.addEventListener('click',()=>removeBatchRow(id));
+  refreshBatch();
+  if(focus) model.focus();
 }
-function previewBatchItem(item,index){
-  batch.active=index;
-  setRaw({...item.raw});
-  renderBatchList();
+function removeBatchRow(id){
+  const index=batch.rows.findIndex(row=>row.id===id);
+  if(index<0) return;
+  batch.rows[index].el.remove();
+  batch.rows.splice(index,1);
+  if(batch.activeId===id) batch.activeId=null;
+  refreshBatch();
+}
+function previewBatchRow(id){
+  refreshBatch();
+  const row=batch.rows.find(item=>item.id===id);
+  if(!row||!row.conf){toast(row?.error??'请先补全这一行');return;}
+  batch.activeId=id;
+  setRaw({...row.raw});
+  refreshBatch();
   $('preview-card').scrollIntoView({behavior:'smooth',block:'start'});
-  toast(`已载入 ${item.conf.model}`);
+  toast(`已载入 ${row.conf.model}`);
 }
 function batchStamp(){
   const date=new Date(),pad=value=>String(value).padStart(2,'0');
@@ -169,21 +226,22 @@ async function exportBatch(){
         const dieline=createFlatSvg(item.raw);
         files.push({name:`效果图/${base}_效果图.svg`,data:presentation});
         files.push({name:`刀模/${base}_刀模.svg`,data:dieline});
-        manifest.push({line:item.line,model:item.conf.model,category:CATEGORY[item.conf.category].description,length:item.raw.length,width:item.raw.width,depth:item.raw.depth,allowance:item.raw.allowance,finalLength:item.conf.length,finalWidth:item.conf.width,finalDepth:item.conf.depth,status:'成功',presentation:`效果图/${base}_效果图.svg`,dieline:`刀模/${base}_刀模.svg`,source:item.source});
+        manifest.push({line:item.row.line,model:item.conf.model,category:CATEGORY[item.conf.category].description,length:item.raw.length,width:item.raw.width,depth:item.raw.depth,allowance:item.raw.allowance,finalLength:item.conf.length,finalWidth:item.conf.width,finalDepth:item.conf.depth,status:'成功',presentation:`效果图/${base}_效果图.svg`,dieline:`刀模/${base}_刀模.svg`,source:batchSource(item.raw)});
         exported++;
       }catch(error){
-        manifest.push({line:item.line,model:item.conf.model,category:CATEGORY[item.conf.category].description,length:item.raw.length,width:item.raw.width,depth:item.raw.depth,allowance:item.raw.allowance,finalLength:item.conf.length,finalWidth:item.conf.width,finalDepth:item.conf.depth,status:`生成失败：${error.message}`,presentation:'',dieline:'',source:item.source});
+        manifest.push({line:item.row.line,model:item.conf.model,category:CATEGORY[item.conf.category].description,length:item.raw.length,width:item.raw.width,depth:item.raw.depth,allowance:item.raw.allowance,finalLength:item.conf.length,finalWidth:item.conf.width,finalDepth:item.conf.depth,status:`生成失败：${error.message}`,presentation:'',dieline:'',source:batchSource(item.raw)});
       }
       if(index%4===3) await new Promise(resolve=>setTimeout(resolve,0));
     }
-    batch.errors.forEach(error=>manifest.push({line:error.line,model:'',category:'',length:'',width:'',depth:'',allowance:'',finalLength:'',finalWidth:'',finalDepth:'',status:`错误：${error.message}`,presentation:'',dieline:'',source:error.source}));
+    const errorRows=batch.rows.filter(row=>row.error);
+    errorRows.forEach(row=>manifest.push({line:row.line,model:row.raw?.model??'',category:row.raw&&CATEGORY[row.raw.category]?CATEGORY[row.raw.category].description:'',length:row.raw?.length??'',width:row.raw?.width??'',depth:row.raw?.depth??'',allowance:row.raw?.allowance??'',finalLength:'',finalWidth:'',finalDepth:'',status:`错误：${row.error}`,presentation:'',dieline:'',source:batchSource(row.raw)}));
     manifest.sort((a,b)=>a.line-b.line);
     const header=['行','型号','分类','输入长','输入宽','输入高','余量','成品长','成品宽','成品高','状态','效果图文件','刀模文件','原始行'];
     const rows=[header,...manifest.map(row=>[row.line,row.model,row.category,row.length,row.width,row.depth,row.allowance,row.finalLength,row.finalWidth,row.finalDepth,row.status,row.presentation,row.dieline,row.source])];
     files.push({name:'清单.csv',data:`\uFEFF${rows.map(row=>row.map(csvCell).join(',')).join('\r\n')}`});
-    files.push({name:'说明.txt',data:`LINOX 批量导出\n生成时间：${new Date().toLocaleString('zh-CN')}\n有效项：${exported}\n错误行：${batch.errors.length}\n目录：效果图/、刀模/、清单.csv\n`});
+    files.push({name:'说明.txt',data:`LINOX 批量导出\n生成时间：${new Date().toLocaleString('zh-CN')}\n有效项：${exported}\n错误行：${errorRows.length}\n目录：效果图/、刀模/、清单.csv\n`});
     download(`LINOX_批量_${batchStamp()}.zip`,createZipBlob(files),'application/zip');
-    $('batch-status').textContent=`已导出 ${exported} 项${batch.errors.length?`，跳过 ${batch.errors.length} 行`:''}`;
+    $('batch-status').textContent=`已导出 ${exported} 项${errorRows.length?`，跳过 ${errorRows.length} 行`:''}`;
     toast(`批量导出完成：${exported} 项`);
   }catch(error){
     $('batch-status').textContent=`导出失败：${error.message}`;
@@ -197,9 +255,7 @@ document.querySelectorAll('.preset').forEach(btn=>btn.addEventListener('click',(
 form.addEventListener('input',()=>{updateSizing();render();});
 form.addEventListener('change',()=>{updateSizing();render();});
 form.addEventListener('submit',e=>e.preventDefault());
-let batchTimer;
-$('batch-input').addEventListener('input',()=>{clearTimeout(batchTimer);batchTimer=setTimeout(refreshBatch,120);});
-$('batch-allowance').addEventListener('input',()=>{clearTimeout(batchTimer);batchTimer=setTimeout(refreshBatch,120);});
+$('batch-add').addEventListener('click',()=>addBatchRow({category:'rod',allowance:3},true));
 $('batch-export').addEventListener('click',exportBatch);
 $('download-presentation').addEventListener('click',()=>exportWith(raw=>download(filename(raw,'presentation','svg'),createPresentationSvg(raw),'image/svg+xml;charset=utf-8')));
 $('download-flat').addEventListener('click',()=>exportWith(raw=>download(filename(raw,'dieline','svg'),createFlatSvg(raw),'image/svg+xml;charset=utf-8')));
@@ -218,4 +274,6 @@ $('json-file').addEventListener('change',async e=>{
   e.target.value='';
 });
 try{const saved=JSON.parse(localStorage.getItem('linox-packaging-studio:v1')||'null');if(saved){normalizeInput(saved);setRaw(saved);}else render();}catch{render();}
-refreshBatch();
+addBatchRow({model:'SI15C',category:'rod',length:80,width:20,depth:13,allowance:3});
+addBatchRow({model:'GE17C',category:'radial',length:29,width:29,depth:13,allowance:3});
+addBatchRow({model:'S6004-2RS',category:'deep',length:43,width:43,depth:12,allowance:3});
