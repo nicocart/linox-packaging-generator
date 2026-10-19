@@ -81,7 +81,7 @@ function openCarton(config){
   const [faceOX,faceOY]=P(0,0,H);
   const faceMarkW=Math.min(L*.365,H*1.39);
   const faceModelSize=Math.min(H*.226,L*.095);
-  const frontPrint=`<g transform="matrix(${v(ex[0])} ${v(ex[1])} 0 1 ${v(faceOX)} ${v(faceOY)})">
+  const frontPrint=`<g data-open-box-print="true" transform="matrix(${v(ex[0])} ${v(ex[1])} 0 1 ${v(faceOX)} ${v(faceOY)})">
     <svg width="${v(L)}" height="${v(H)}" viewBox="0 0 ${v(L)} ${v(H)}" overflow="hidden">
       <g fill="#cbd0d6" pointer-events="none">
         <polygon points="${v(L*.37)},${v(H)} ${v(L*.45)},${v(H)} ${v(L*.68)},0 ${v(L*.60)},0" opacity=".28"/>
