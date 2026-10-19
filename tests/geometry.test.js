@@ -8,7 +8,7 @@ const markup=svg=>svg.replace(/data:[^"')]+/g,'');
 
 // Exports embed the chosen font; in Node, feed the woff2 files from disk.
 import {readFileSync} from 'node:fs';
-import {FONTS, registerFontData, fontAttrs, textWidth, capHeight} from '../src/fonts.js';
+import {FONTS, MODEL_FONT, CATEGORY_FONT, registerFontData, fontAttrs, textWidth, capHeight} from '../src/fonts.js';
 for(const [key,{weights}] of Object.entries(FONTS))
   for(const w of Object.values(weights))
     registerFontData(key,w,readFileSync(new URL(`../assets/fonts/${key}-${w}.woff2`,import.meta.url)).toString('base64'));
@@ -154,7 +154,8 @@ test('all categories share one SI15C-derived front and back layout',()=>{
     const svg=createFlatSvg(item);
     const names=[...svg.matchAll(/data-template="si15c-master"/g)];
     assert.equal(names.length,2);
-    assert.match(svg,new RegExp(fontAttrs('barlow','heavy')));
+    assert.match(svg,new RegExp(fontAttrs(MODEL_FONT,'heavy')));
+    assert.match(svg,new RegExp(fontAttrs(CATEGORY_FONT,'medium')));
     assert.equal([...svg.matchAll(/data-layer="bearing-watermark"/g)].length,2);
     assert.match(svg,/data-brand-badge="compact"/);
     assert.doesNotMatch(svg,/data-layer="diagonal-branding"/);
@@ -171,54 +172,40 @@ test('the application displays one full preview, not alternate view tabs',async(
   assert.match(app,/const output=createPresentationSvg\(raw[,)]/);
 });
 
-test('every downloadable SVG is well-formed XML for every preset and font',async()=>{
+test('every downloadable SVG is well-formed XML for every preset',async()=>{
   const {createPresentationSvg}=await import('../src/presentation.js');
-  for(const item of Object.values(PRESETS)) for(const font of Object.keys(FONTS)){
-    const cfg={...item,font};
-    for(const [name,svg] of [['presentation',createPresentationSvg(cfg)],['dieline',createFlatSvg(cfg)],['views',createViewsSvg(cfg)],['iso',createIsoSvg(cfg)]])
-      assertWellFormed(svg,`${item.model}/${font}/${name}`);
+  for(const item of Object.values(PRESETS)){
+    for(const [name,svg] of [['presentation',createPresentationSvg(item)],['dieline',createFlatSvg(item)],['views',createViewsSvg(item)],['iso',createIsoSvg(item)]])
+      assertWellFormed(svg,`${item.model}/${name}`);
   }
 });
-test('exports use only the chosen embedded font, never system fonts',async()=>{
+test('exports embed the fixed brand fonts, never system fonts',async()=>{
   const {createPresentationSvg}=await import('../src/presentation.js');
-  for(const font of Object.keys(FONTS)){
-    const cfg={...PRESETS.GE17C,font};
-    for(const svg of [createPresentationSvg(cfg),createFlatSvg(cfg)]){
+  const fixed=[MODEL_FONT,CATEGORY_FONT];
+  for(const item of Object.values(PRESETS)){
+    for(const svg of [createPresentationSvg(item),createFlatSvg(item)]){
       const families=new Set([...markup(svg).matchAll(/font-family="([^"]+)"/g)].map(m=>m[1]));
-      assert.deepEqual([...families],[`'LINOX ${FONTS[font].label}',sans-serif`]);
-      for(const w of Object.values(FONTS[font].weights))
-        assert.ok(svg.includes(`font-family:'LINOX ${FONTS[font].label}';font-weight:${w};src:url(data:font/woff2;base64,`),`${font} ${w} not embedded`);
+      assert.deepEqual([...families].sort(),fixed.map(key=>`'LINOX ${FONTS[key].label}',sans-serif`).sort());
+      for(const key of fixed)
+        for(const w of Object.values(FONTS[key].weights))
+          assert.ok(svg.includes(`font-family:'LINOX ${FONTS[key].label}';font-weight:${w};src:url(data:font/woff2;base64,`),`${key} ${w} not embedded`);
       assert.doesNotMatch(markup(svg),/Arial|Helvetica|Segoe/);
     }
   }
 });
-test('unknown fonts are rejected and the default is Barlow',()=>{
-  assert.equal(normalizeInput(PRESETS.SI15C).font,'barlow');
-  assert.throws(()=>normalizeInput({...PRESETS.SI15C,font:'comic-sans'}));
-  assert.throws(()=>normalizeInput({...PRESETS.SI15C,modelFont:'comic-sans'}));
-  assert.throws(()=>normalizeInput({...PRESETS.SI15C,categoryFont:'comic-sans'}));
-  // Object.prototype keys must not pass as valid family/category names.
+test('brand typography is fixed regardless of input',()=>{
+  const conf=normalizeInput({...PRESETS.SI15C,font:'oswald',modelFont:'roboto',categoryFont:'montserrat'});
+  assert.deepEqual([conf.modelFont,conf.categoryFont,conf.font],[MODEL_FONT,CATEGORY_FONT,MODEL_FONT]);
+  const svg=createFlatSvg({...PRESETS.SI15C,modelFont:'oswald',categoryFont:'montserrat'});
+  assert.match(svg,new RegExp(fontAttrs(MODEL_FONT,'heavy')));
+  assert.match(svg,new RegExp(fontAttrs(CATEGORY_FONT,'medium')));
+  // Object.prototype keys must not pass as valid category names.
   assert.throws(()=>normalizeInput({...PRESETS.SI15C,category:'constructor'}));
-  assert.throws(()=>normalizeInput({...PRESETS.SI15C,font:'constructor'}));
-});
-test('model and category can use different fonts, both embedded',()=>{
-  const cfg={...PRESETS.SI15C,modelFont:'oswald',categoryFont:'roboto'};
-  const conf=normalizeInput(cfg);
-  assert.deepEqual([conf.modelFont,conf.categoryFont,conf.font],['oswald','roboto','oswald']);
-  const svg=createFlatSvg(cfg);
-  assertWellFormed(svg,'two-fonts');
-  assert.match(svg,/font-family="'LINOX Oswald',sans-serif" font-weight="700"/);
-  assert.match(svg,/font-family="'LINOX Roboto',sans-serif" font-weight="500"/);
-  for(const key of ['oswald','roboto'])
-    for(const w of Object.values(FONTS[key].weights))
-      assert.ok(svg.includes(`font-family:'LINOX ${FONTS[key].label}';font-weight:${w};src:url(data:font/woff2;base64,`),`${key} ${w} not embedded`);
-  // Legacy single-font configs still drive both roles.
-  const legacy=normalizeInput({...PRESETS.SI15C,font:'montserrat'});
-  assert.deepEqual([legacy.modelFont,legacy.categoryFont,legacy.font],['montserrat','montserrat','montserrat']);
 });
 
 /** Front-panel text and drawing boxes, read back from the generated SVG. */
 function frontBoxes(cfg){
+  const conf=normalizeInput(cfg);
   const svg=createFlatSvg(cfg);
   const start=svg.indexOf('data-template="si15c-master"');
   const front=svg.slice(start,svg.indexOf('</svg>',start));
@@ -228,7 +215,7 @@ function frontBoxes(cfg){
   const roleOf=a=>a.match(/data-role="(\w+)"/)[1];
   const lines=texts.map(([,a,str])=>{
     const role=roleOf(a)==='model'?'heavy':'medium', size=num(a,'font-size'), x=num(a,'x'), y=num(a,'y');
-    const font=role==='heavy'?(cfg.modelFont??cfg.font):(cfg.categoryFont??cfg.font);
+    const font=role==='heavy'?conf.modelFont:conf.categoryFont;
     return {role:roleOf(a),x,y,w:textWidth(str,font,role,size),cap:capHeight(font,role,size),size};
   });
   return {pic:{x:num(pic,'x'),y:num(pic,'y'),w:num(pic,'width'),h:num(pic,'height')},lines};
@@ -245,23 +232,29 @@ test('front rule sits under the wordmark at half its width',()=>{
   assert.ok(Math.abs(ruleW-wordmarkW*.5)<.1,`rule ${ruleW} vs half wordmark ${wordmarkW*.5}`);
   assert.match(rule,/stroke="#1a1a1a"/);
 });
+test('wide front keeps a real side margin',()=>{
+  const {pic,lines}=frontBoxes(PRESETS.SI15C);
+  const left=Math.min(...lines.map(l=>l.x));
+  assert.ok(left>=4.5,`left margin only ${left.toFixed(2)} mm`);
+  assert.ok(PRESETS.SI15C.length-(pic.x+pic.w)>=4.5,`right margin only ${(PRESETS.SI15C.length-pic.x-pic.w).toFixed(2)} mm`);
+});
 test('front text never overlaps the product drawing',()=>{
   const sizes=[[83,23,16],[32,32,16],[46,46,15],[60,40,20],[40,60,20],[30,30,30]];
   const models=['SI15C','GE17C','S6004-2RS','GEG120ES-2RS'];
-  for(const font of Object.keys(FONTS)) for(const [length,width,depth] of sizes) for(const model of models){
-    const cfg={model,category:'radial',length,width,depth,font};
+  for(const [length,width,depth] of sizes) for(const model of models){
+    const cfg={model,category:'radial',length,width,depth};
     const {pic,lines}=frontBoxes(cfg);
     for(const l of lines){
       const overlapX=l.x+l.w>pic.x && l.x<pic.x+pic.w;
       const overlapY=l.y>pic.y && l.y-l.cap<pic.y+pic.h;
-      assert.ok(!(overlapX&&overlapY),`${font} ${model} ${length}x${width}: ${l.role} overlaps drawing`);
-      assert.ok(l.x+l.w<=length+1e-6,`${font} ${model} ${length}x${width}: ${l.role} runs off the panel`);
+      assert.ok(!(overlapX&&overlapY),`${model} ${length}x${width}: ${l.role} overlaps drawing`);
+      assert.ok(l.x+l.w<=length+1e-6,`${model} ${length}x${width}: ${l.role} runs off the panel`);
     }
   }
 });
 test('square fronts keep compact line spacing',()=>{
   for(const [length,width] of [[32,32],[46,46],[40,46]]){
-    const {lines}=frontBoxes({...PRESETS.GE17C,length,width,depth:16,font:'barlow'});
+    const {lines}=frontBoxes({...PRESETS.GE17C,length,width,depth:16});
     const model=lines.find(l=>l.role==='model'), subs=lines.filter(l=>l.role==='category');
     // Gap from model baseline to the first category cap line, relative to model cap height.
     const gap=(subs[0].y-subs[0].cap-model.y)/model.cap;
@@ -271,14 +264,12 @@ test('square fronts keep compact line spacing',()=>{
 });
 
 test('® is a vector ring plus R in the print font, large enough to read',()=>{
-  for(const font of Object.keys(FONTS)){
-    const svg=createFlatSvg({...PRESETS.SI15C,font});
-    assert.doesNotMatch(markup(svg),/®/,'a typed ® would fall back to a system font');
-    const marks=[...svg.matchAll(/<g data-role="registered"><circle [^>]*r="([0-9.]+)"/g)].map(m=>Number(m[1]));
-    assert.equal(marks.length,3,'front + two sides');
-    // Side panel 16 × 23 mm: the slimmer side logo still needs a legible ®.
-    assert.ok(Math.min(...marks)*2>=.75,`${font}: smallest ® ${Math.min(...marks)*2} mm`);
-  }
+  const svg=createFlatSvg(PRESETS.SI15C);
+  assert.doesNotMatch(markup(svg),/®/,'a typed ® would fall back to a system font');
+  const marks=[...svg.matchAll(/<g data-role="registered"><circle [^>]*r="([0-9.]+)"/g)].map(m=>Number(m[1]));
+  assert.equal(marks.length,3,'front + two sides');
+  // Side panel 16 × 23 mm: the slimmer side logo still needs a legible ®.
+  assert.ok(Math.min(...marks)*2>=.75,`smallest ® ${Math.min(...marks)*2} mm`);
 });
 test('side panel centres logo and model on the same line',()=>{
   for(const item of Object.values(PRESETS)){
@@ -299,7 +290,7 @@ test('side panel centres logo and model on the same line',()=>{
 });
 test('category line is at least half the model cap height',()=>{
   for(const item of Object.values(PRESETS)){
-    const {lines}=frontBoxes({...item,font:'barlow'});
+    const {lines}=frontBoxes({...item});
     const model=lines.find(l=>l.role==='model'), sub=lines.find(l=>l.role==='category');
     // Target is 0.6×; on a 32 mm square face "Radial Spherical" is width-limited to ~0.48×.
     assert.ok(sub.cap/model.cap>=.45,`${item.model}: category ${(sub.cap/model.cap).toFixed(2)}× model cap`);

@@ -4,7 +4,7 @@
  * opposed tuck lids. This is NOT a production-approved die until converter
  * compensation, tooling and tolerances are validated with a carton supplier.
  */
-import { FONTS, DEFAULT_FONT } from './fonts.js';
+import { MODEL_FONT, CATEGORY_FONT } from './fonts.js';
 
 export const CATEGORY = Object.freeze({
   rod: { label: 'Rod End', illustration: 'rod', description: '杆端关节轴承' },
@@ -32,13 +32,12 @@ export function normalizeInput(input) {
   if (!Object.hasOwn(CATEGORY, category)) throw new Error('请选择支持的产品分类');
   if (!dims.every(v => isValidNumber(v) && v >= 8 && v <= 600)) throw new Error('长宽高必须在 8–600 mm 之间');
   if (!Number.isFinite(allowance) || allowance < 0 || allowance > 30) throw new Error('余量必须在 0–30 mm 之间');
-  // `font` is the legacy single-font key and also drives annotations. Model and
-  // category can have their own family; both default to the legacy/default font.
-  const modelFont = input.modelFont ?? input.font ?? DEFAULT_FONT;
-  const categoryFont = input.categoryFont ?? input.font ?? DEFAULT_FONT;
-  const font = input.font ?? modelFont;
-  for (const key of [font, modelFont, categoryFont])
-    if (!Object.hasOwn(FONTS, key)) throw new Error('请选择支持的印刷字体');
+  // Brand typography is fixed: model and annotations use Barlow Semi Condensed,
+  // the category line uses Barlow. Input font fields are accepted for backward
+  // compatibility but intentionally ignored.
+  const font = MODEL_FONT;
+  const modelFont = MODEL_FONT;
+  const categoryFont = CATEGORY_FONT;
   const sizes = input.mode === 'product' ? dims.map(v => v + allowance) : dims;
   return { model, category, length: round(sizes[0]), width: round(sizes[1]), depth: round(sizes[2]), mode: input.mode === 'product' ? 'product' : 'box', allowance, font, modelFont, categoryFont };
 }

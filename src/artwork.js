@@ -112,15 +112,18 @@ function precisionWatermark(w,h,side='front'){
 // × C; subPitch × subCap. Long cartons carry a larger logo (the established
 // SI15C look); square ones are width-limited, so their logo stays in step with the text.
 const STACK={ logoHWide:1.5, logoHSquare:1.22, gapModel:.5, subCap:.6, subPitch:1.5 };
-// Short rule under the front wordmark: half the wordmark width, with breathing
-// room above and below so the model never feels glued to the logo.
-const RULE={ widthRatio:.5, gapBefore:.34, gapAfter:.42, thickness:.055 };
+// Short rule under the front wordmark: half the wordmark width. The thicker
+// stroke and generous lower gap separate the logo from the model line.
+const RULE={ widthRatio:.5, gapBefore:.36, gapAfter:.7, thickness:.08 };
 function frontArtwork(config,x,y,w,h){
   const modelFont=config.modelFont ?? config.font;
   const categoryFont=config.categoryFont ?? modelFont;
   const rows=labelLines(CATEGORY[config.category].label);
   const profile=getLayoutProfile(w,h), wide=w/h>=1.6;
-  const pad=Math.min(w,h)*.08, gap=Math.min(w,h)*.05;
+  // Wide faces are long but shallow: use a width-aware side margin so the logo
+  // and copy never sit against the crease, and keep a proportional top/bottom margin.
+  const padX=Math.max(Math.min(w,h)*.10, w*.06), padY=Math.min(w,h)*.12;
+  const gap=Math.min(w,h)*.05;
   // Width of each element per unit C.
   const modelWPer=textWidth(config.model,modelFont,'heavy',1)/capHeight(modelFont,'heavy',1);
   // Category line width per unit of its own cap height.
@@ -129,22 +132,22 @@ function frontArtwork(config,x,y,w,h){
   const subStack=logoToModel+1+STACK.gapModel+STACK.subCap*(1+(rows.length-1)*STACK.subPitch);
   // Column widths: wide panels keep logo and text in the left ~55%; square
   // panels let the logo span the top and keep text in the left ~60%.
-  const textCol=w*(wide?.55:.6)-pad;
+  const textCol=w*(wide?.55:.6)-padX;
   // Model sets C; the category is STACK.subCap × C unless its own width limits it.
   const textC=textCol/modelWPer;
   let C, logoHt;
   if (wide) {
     // Logo is STACK.logoHWide × C; one scale fits the whole block.
     const logoWPer=STACK.logoHWide/LOGO_RATIO*(1+REG_EXTRA);
-    C=Math.min((h-2*pad)/(STACK.logoHWide+subStack), textCol/logoWPer, textC, h*.25);
+    C=Math.min((h-2*padY)/(STACK.logoHWide+subStack), textCol/logoWPer, textC, h*.25);
     logoHt=STACK.logoHWide*C;
   } else {
     // Logo spans the panel width; text is sized by its own column, so a long
     // model shrinks only the text, never the brand.
-    logoHt=Math.min((w-2*pad)*LOGO_RATIO/(1+REG_EXTRA), h*.17);
-    C=Math.min((h-2*pad-logoHt)/subStack, textC, h*.15, logoHt/STACK.logoHSquare);
+    logoHt=Math.min((w-2*padX)*LOGO_RATIO/(1+REG_EXTRA), h*.17);
+    C=Math.min((h-2*padY-logoHt)/subStack, textC, h*.15, logoHt/STACK.logoHSquare);
   }
-  const top=(h-logoHt-subStack*C)/2, left=pad;
+  const top=(h-logoHt-subStack*C)/2, left=padX;
   const logoW=logoHt/LOGO_RATIO, logoBottom=top+logoHt;
   // Category shares the model column, so the drawing keeps its space on narrow panels.
   const subCap=Math.min(STACK.subCap*C,textCol/subWPerCap);
@@ -156,8 +159,8 @@ function frontArtwork(config,x,y,w,h){
   const ruleStroke=Math.max(.1,C*RULE.thickness);
   // Product drawing in the free area, aligned right; centred vertically in it.
   const art=ASSETS[CATEGORY[config.category].illustration];
-  const ax0=Math.max(textRight+gap,wide?left+logoW*(1+REG_EXTRA)+gap:0), ax1=w-pad*.6;
-  const ay0=wide?pad*.6:logoBottom+gap, ay1=h-pad*.6;
+  const ax0=Math.max(textRight+gap,wide?left+logoW*(1+REG_EXTRA)+gap:0), ax1=w-padX;
+  const ay0=wide?padY:logoBottom+gap, ay1=h-padY;
   const k=Math.max(0,Math.min((ax1-ax0)/art.width,(ay1-ay0)/art.height));
   const aw=art.width*k, ah=art.height*k;
   return `<svg x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" viewBox="0 0 ${n(w)} ${n(h)}" overflow="hidden" data-layout="${profile}" data-template="si15c-master">

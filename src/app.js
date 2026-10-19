@@ -1,28 +1,18 @@
 import { CATEGORY, PRESETS, normalizeInput, assessLayout } from './geometry.js';
 import { createFlatSvg } from './artwork.js';
 import { createPresentationSvg } from './presentation.js';
-import { FONTS, DEFAULT_FONT, loadFontDataFor } from './fonts.js';
+import { loadFontDataFor } from './fonts.js';
 
 const $=id=>document.getElementById(id);
 const form=$('params');
-const fields=['model','category','modelFont','categoryFont','length','width','depth','allowance'];
+const fields=['model','category','length','width','depth','allowance'];
 let pending=null;
-
-const fontOptions=()=>Object.entries(FONTS).map(([key,{label,note}])=>new Option(`${label} · ${note}`,key));
-for(const id of ['model-font','category-font']){
-  const select=$(id);
-  select.replaceChildren(...fontOptions());
-  select.value=DEFAULT_FONT;
-}
 
 function currentRaw() {
   return Object.fromEntries([...fields.map(x=>[x,form.elements.namedItem(x).value]),['mode',form.elements.namedItem('mode').value]]);
 }
 function setRaw(raw) {
   const input={...PRESETS.SI15C,...raw};
-  // Older saved configs and exported JSON only carry a single `font` key.
-  if(input.modelFont===undefined && input.font!==undefined) input.modelFont=input.font;
-  if(input.categoryFont===undefined && input.font!==undefined) input.categoryFont=input.font;
   for(const f of fields) if(input[f]!==undefined) form.elements.namedItem(f).value=input[f];
   for(const radio of form.elements.namedItem('mode')) radio.checked=radio.value===(input.mode||'box');
   updateSizing();render();

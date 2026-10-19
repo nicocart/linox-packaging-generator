@@ -16,7 +16,10 @@ export const FONTS = Object.freeze({
   montserrat: { label: 'Montserrat', note: '几何无衬线', weights: { regular: 400, medium: 600, heavy: 800 } },
   oswald: { label: 'Oswald', note: '高窄标题体', weights: { regular: 400, medium: 500, heavy: 700 } },
 });
-export const DEFAULT_FONT = 'barlow';
+export const DEFAULT_FONT = 'barlow-semi-condensed';
+/** Brand typography is fixed: model uses Barlow Semi Condensed, category Barlow. */
+export const MODEL_FONT = 'barlow-semi-condensed';
+export const CATEGORY_FONT = 'barlow';
 
 const familyName = key => `LINOX ${FONTS[key].label}`;
 const weightOf = (key, role) => FONTS[key].weights[role];
