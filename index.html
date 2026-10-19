@@ -4,8 +4,8 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="theme-color" content="#161a20"/>
-  <meta name="description" content="LINOX 包装生成器：分类固定产品线稿、参数化纸盒刀模、毫米尺寸标注、矢量 SVG/PDF 导出。"/>
-  <title>LINOX Packaging Studio · 参数化包装设计</title>
+  <meta name="description" content="LINOX 包装生成器：分类固定产品线稿、参数化纸盒刀模、毫米尺寸标注、矢量和打印文件导出。"/>
+  <title>LINOX 包装设计生成器 · 参数化包装</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%23cf132c'/%3E%3Cpath d='M15 16H25V39H49V49H15Z' fill='white'/%3E%3C/svg%3E"/>
   <link rel="stylesheet" href="./src/styles.css"/>
   <script type="module" src="./src/app.js"></script>
@@ -13,25 +13,25 @@
 <body>
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="brand-heading"><span class="brand-symbol">L</span><div><div class="brand-name">LINOX <span class="brand-muted">/ STUDIO</span></div><div class="brand-caption">PACKAGING ENGINEERING</div></div></div>
-      <div class="side-label">01 <span>PRODUCT PARAMETERS</span></div>
+      <div class="brand-heading"><span class="brand-symbol">L</span><div><div class="brand-name">LINOX <span class="brand-muted">/ 工作室</span></div><div class="brand-caption">包装工程</div></div></div>
+      <div class="side-label">01 <span>产品参数</span></div>
       <div class="preset-heading">快速使用示例</div>
       <div class="preset-list" aria-label="内置型号示例">
-        <button type="button" class="preset active" data-preset="SI15C"><span><b>SI15C</b><small>Rod End</small></span><span class="preset-meta">83 × 23 × 16</span></button>
-        <button type="button" class="preset" data-preset="GE17C"><span><b>GE17C</b><small>Spherical Plain</small></span><span class="preset-meta">32 × 32 × 16</span></button>
-        <button type="button" class="preset" data-preset="S6004-2RS"><span><b>S6004-2RS</b><small>Deep Groove</small></span><span class="preset-meta">46 × 46 × 15</span></button>
+        <button type="button" class="preset active" data-preset="SI15C"><span><b>SI15C</b><small>杆端关节轴承</small></span><span class="preset-meta">83 × 23 × 16</span></button>
+        <button type="button" class="preset" data-preset="GE17C"><span><b>GE17C</b><small>向心关节轴承</small></span><span class="preset-meta">32 × 32 × 16</span></button>
+        <button type="button" class="preset" data-preset="S6004-2RS"><span><b>S6004-2RS</b><small>深沟球轴承</small></span><span class="preset-meta">46 × 46 × 15</span></button>
       </div>
       <form id="params" autocomplete="off">
-        <label for="model">型号 <span>MODEL / SKU</span></label>
+        <label for="model">型号</label>
         <input name="model" id="model" maxlength="40" required value="SI15C" placeholder="如 SI20C"/>
-        <label for="category">产品分类 <span>CATEGORY</span></label>
+        <label for="category">产品分类</label>
         <select name="category" id="category">
-          <option value="rod">Rod End / 杆端关节轴承</option>
-          <option value="radial">Radial Spherical / 向心关节轴承</option>
-          <option value="deep">Deep Groove / 深沟球轴承</option>
+          <option value="rod">杆端关节轴承</option>
+          <option value="radial">向心关节轴承</option>
+          <option value="deep">深沟球轴承</option>
         </select>
-        <label>印刷字体 <span>PRINT FONT</span></label>
-        <div class="formula-help" id="font-help">固定为：型号 Barlow Semi Condensed · 分类 Barlow。</div>
+        <label>印刷字体</label>
+        <div class="formula-help" id="font-help">固定为：型号 Barlow Semi Condensed；分类 Barlow。</div>
         <label>尺寸输入方式</label>
         <div class="toggle-row" role="radiogroup" aria-label="尺寸输入方式">
           <label class="radio-option"><input type="radio" name="mode" value="box" checked/><span>纸盒尺寸</span></label>
@@ -39,38 +39,38 @@
         </div>
         <div class="dimension-label">长宽高 <span class="unit-tag">mm</span></div>
         <div class="dimension-row">
-          <div><label for="length">L · 长</label><input type="number" name="length" id="length" min="8" max="600" step="0.1" value="83" required/></div>
-          <div><label for="width">W · 宽</label><input type="number" name="width" id="width" min="8" max="600" step="0.1" value="23" required/></div>
-          <div><label for="depth">H · 高</label><input type="number" name="depth" id="depth" min="8" max="600" step="0.1" value="16" required/></div>
+          <div><label for="length">长</label><input type="number" name="length" id="length" min="8" max="600" step="0.1" value="83" required/></div>
+          <div><label for="width">宽</label><input type="number" name="width" id="width" min="8" max="600" step="0.1" value="23" required/></div>
+          <div><label for="depth">高</label><input type="number" name="depth" id="depth" min="8" max="600" step="0.1" value="16" required/></div>
         </div>
         <div id="allowance-wrap" hidden><label for="allowance">每个方向增加的总余量 (mm)</label><input type="number" id="allowance" name="allowance" min="0" max="30" step="0.1" value="2"/></div>
         <div class="formula-help" id="formula-help">输入纸盒名义外尺寸。展开图将以毫米计算。</div>
       </form>
       <div class="sidebar-separator"></div>
-      <div class="side-label">02 <span>BRAND SYSTEM</span></div>
-      <div class="brand-rule"><span class="rule-dot red"></span><span><strong>LINOX 视觉标准</strong><small>红黑配色 / 中英混合排版</small></span><span class="mini-label">固定</span></div>
-      <div class="brand-rule"><span class="rule-dot slate"></span><span><strong>产品分类线稿</strong><small>每个分类复用一张 SVG</small></span><span class="mini-label">固定</span></div>
-      <div class="brand-rule"><span class="rule-dot cyan"></span><span><strong>标准双插舌盒</strong><small>尺寸驱动 / 裁切 & 压痕</small></span><span class="mini-label">参数化</span></div>
-      <div class="sidebar-bottom"><div class="status-pulse"></div><div>LOCAL PROCESSING <small>数据仅在浏览器中处理</small></div><span class="version">v0.2</span></div>
+      <div class="side-label">02 <span>品牌规范</span></div>
+      <div class="brand-rule"><span class="rule-dot red"></span><span><strong>LINOX 视觉标准</strong><small>红黑配色 / 字体规范</small></span><span class="mini-label">固定</span></div>
+      <div class="brand-rule"><span class="rule-dot slate"></span><span><strong>产品分类线稿</strong><small>每个分类复用一张线稿</small></span><span class="mini-label">固定</span></div>
+      <div class="brand-rule"><span class="rule-dot cyan"></span><span><strong>标准双插舌盒</strong><small>尺寸驱动 / 裁切与压痕</small></span><span class="mini-label">参数化</span></div>
+      <div class="sidebar-bottom"><div class="status-pulse"></div><div>本地处理 <small>数据仅在浏览器中处理</small></div><span class="version">v0.2</span></div>
     </aside>
 
     <main class="workspace">
-      <header class="workspace-header"><div><div class="eyebrow">LINOX / PRODUCTION TOOLS</div><h1>包装设计生成器 <span>Packaging Studio</span></h1><p>一套设计标准，适配不同轴承产品与纸盒尺寸。</p></div><div class="header-buttons"><button type="button" class="light-btn" id="download-json">↓ 导出配置</button><button type="button" class="dark-btn" id="print-pdf">↗ 打印 / PDF</button></div></header>
+      <header class="workspace-header"><div><div class="eyebrow">LINOX / 生产工具</div><h1>包装设计生成器</h1><p>一套设计标准，适配不同轴承产品与纸盒尺寸。</p></div><div class="header-buttons"><button type="button" class="light-btn" id="download-json">↓ 导出配置</button><button type="button" class="dark-btn" id="print-pdf">↗ 打印 / 导出</button></div></header>
       <section class="workspace-body">
         <div class="summary-grid">
-          <div class="summary-card"><div>当前型号</div><strong id="summary-model">SI15C</strong><small id="summary-category">Rod End</small></div>
+          <div class="summary-card"><div>当前型号</div><strong id="summary-model">SI15C</strong><small id="summary-category">杆端关节轴承</small></div>
           <div class="summary-card"><div>成品纸盒尺寸</div><strong id="summary-dims">83 × 23 × 16</strong><small>mm · 长 × 宽 × 高</small></div>
-          <div class="summary-card"><div>盒型</div><strong>Reverse Tuck End</strong><small>反向插舌 · 概念模板</small></div>
+          <div class="summary-card"><div>盒型</div><strong>反向插舌盒</strong><small>反向插舌 · 概念模板</small></div>
         </div>
         <div class="preview-card">
-          <div class="preview-header"><div><span class="eyebrow">LIVE PREVIEW</span><h2>包装全景预览 · 四视图与刀模展开</h2></div></div>
-          <div class="preview-viewport"><div class="viewport-top"><span class="viewport-label"><span class="live-dot"></span> SVG VECTOR PREVIEW</span><span id="scale-note">精确毫米矢量绘制</span></div><div id="drawing" aria-live="polite"></div><div class="viewport-bottom"><span>◉ 白卡双插舌结构</span><span id="drawing-caption">前 / 后 / 侧面</span></div></div>
-          <div class="preview-footer"><div class="legend"><span><i class="legend-line cut"></i>裁切 CUT</span><span><i class="legend-line crease"></i>压痕 FOLD</span><span><i class="legend-line ink"></i>印刷 INK</span></div><div class="download-buttons"><button type="button" class="light-btn" id="download-presentation">↓ 效果展示 SVG</button><button type="button" class="accent-btn" id="download-flat">↓ 刀模 SVG</button></div></div>
+          <div class="preview-header"><div><span class="eyebrow">实时预览</span><h2>包装全景预览 · 四视图与刀模展开</h2></div></div>
+          <div class="preview-viewport"><div class="viewport-top"><span class="viewport-label"><span class="live-dot"></span> 矢量预览</span><span id="scale-note">精确毫米矢量绘制</span></div><div id="drawing" aria-live="polite"></div><div class="viewport-bottom"><span>◉ 白卡双插舌结构</span><span id="drawing-caption">前 / 后 / 侧面</span></div></div>
+          <div class="preview-footer"><div class="legend"><span><i class="legend-line cut"></i>裁切</span><span><i class="legend-line crease"></i>压痕</span><span><i class="legend-line ink"></i>印刷</span></div><div class="download-buttons"><button type="button" class="light-btn" id="download-presentation">↓ 效果展示图</button><button type="button" class="accent-btn" id="download-flat">↓ 刀模图</button></div></div>
         </div>
         <section class="notice-section"><div class="notice-heading"><span>↗</span><div><h3>生产前校核</h3><p>所有结构均为可计算的矢量概念稿，印前仍需供应商确认。</p></div></div><ul id="warnings"></ul></section>
-        <section class="help-card"><div><span class="eyebrow">WORKFLOW</span><h3>从型号到包装，三步完成。</h3><p>输入型号和尺寸 → 实时生成完整展示图与刀模 → 导出可编辑 SVG。下载的毫米 SVG 文件保留独立的裁切、压痕、图案分组。</p></div><div class="help-links"><button id="load-json" type="button">↑ 导入 JSON</button><input id="json-file" type="file" accept="application/json,.json" hidden/><a href="./README.md" target="_blank" rel="noopener">查看技术说明 ↗</a></div></section>
+        <section class="help-card"><div><span class="eyebrow">流程</span><h3>从型号到包装，三步完成。</h3><p>输入型号和尺寸 → 实时生成完整展示图与刀模 → 导出可编辑矢量文件。下载的毫米刀模图保留独立的裁切、压痕、图案分组。</p></div><div class="help-links"><button id="load-json" type="button">↑ 导入配置</button><input id="json-file" type="file" accept="application/json,.json" hidden/><a href="./README.md" target="_blank" rel="noopener">查看技术说明 ↗</a></div></section>
       </section>
-      <footer class="footer">LINOX PACKAGING STUDIO <span>® 属于商标所有人。示意 LOGO 并非原始商标文件，正式生产请替换为授权 SVG。</span></footer>
+      <footer class="footer">LINOX 包装工作室 <span>® 属于商标所有人。示意 LOGO 并非原始商标文件，正式生产请替换为授权矢量文件。</span></footer>
     </main>
   </div>
   <div id="print-sheet" aria-hidden="true"></div>

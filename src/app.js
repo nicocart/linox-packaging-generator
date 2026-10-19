@@ -29,13 +29,13 @@ function render() {
     const output=createPresentationSvg(raw,{embedFonts:false});
     $('drawing').innerHTML=output;
     $('summary-model').textContent=conf.model;
-    $('summary-category').textContent=CATEGORY[conf.category].label;
+    $('summary-category').textContent=CATEGORY[conf.category].description;
     $('summary-dims').textContent=[conf.length,conf.width,conf.depth].join(' × ');
     $('drawing-caption').textContent='上方正反侧面及开盒效果 · 下方完整刀模展开';
     const messages=assessLayout(raw);
     $('warnings').replaceChildren(...messages.map(msg=>{const li=document.createElement('li');li.textContent=msg;return li;}));
     $('drawing').classList.remove('invalid');
-    $('scale-note').textContent='矢量几何 · nominal mm';
+    $('scale-note').textContent='矢量几何 · 名义毫米';
     try { localStorage.setItem('linox-packaging-studio:v1',JSON.stringify(raw)); } catch { /* storage may be disabled */ }
     const current=Object.entries(PRESETS).find(([,p])=>p.model===conf.model&&p.category===conf.category&&p.length===conf.length&&p.width===conf.width&&p.depth===conf.depth);
     document.querySelectorAll('.preset').forEach(b=>b.classList.toggle('active',current?.[0]===b.dataset.preset));

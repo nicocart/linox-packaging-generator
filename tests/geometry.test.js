@@ -171,6 +171,13 @@ test('the application displays one full preview, not alternate view tabs',async(
   assert.doesNotMatch(app,/activeTab|createIsoSvg|createViewsSvg/);
   assert.match(app,/const output=createPresentationSvg\(raw[,)]/);
 });
+test('interface copy is Chinese-first, without bilingual micro labels',()=>{
+  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  for(const label of ['MODEL / SKU','CATEGORY','PRINT FONT','LIVE PREVIEW','SVG VECTOR PREVIEW','WORKFLOW','BRAND SYSTEM','PRODUCT PARAMETERS','PACKAGING ENGINEERING','LOCAL PROCESSING','Reverse Tuck End','Packaging Studio'])
+    assert.ok(!html.includes(label),`UI still contains ${label}`);
+  for(const label of ['产品参数','产品分类','型号','印刷字体','生产工具','实时预览','品牌规范'])
+    assert.ok(html.includes(label),`UI missing ${label}`);
+});
 
 test('every downloadable SVG is well-formed XML for every preset',async()=>{
   const {createPresentationSvg}=await import('../src/presentation.js');
@@ -227,16 +234,26 @@ test('front rule sits under the wordmark at half its width',()=>{
   const rule=front.match(/<line[^>]*data-role="front-rule"[^>]*>/)?.[0];
   assert.ok(rule,'front rule missing');
   const ruleW=Number(rule.match(/data-rule-width="([0-9.]+)"/)[1]);
+  const ruleStroke=Number(rule.match(/stroke-width="([0-9.]+)"/)[1]);
   const scale=Number(front.match(/translate\([^)]*\) scale\(([0-9.]+)\)/)[1]);
   const wordmarkW=305.871*scale;
   assert.ok(Math.abs(ruleW-wordmarkW*.5)<.1,`rule ${ruleW} vs half wordmark ${wordmarkW*.5}`);
+  assert.ok(ruleStroke>=.3,`rule stroke only ${ruleStroke} mm`);
   assert.match(rule,/stroke="#1a1a1a"/);
 });
-test('wide front keeps a real side margin',()=>{
+test('wide front keeps text margins but a tight product margin',()=>{
   const {pic,lines}=frontBoxes(PRESETS.SI15C);
   const left=Math.min(...lines.map(l=>l.x));
-  assert.ok(left>=4.5,`left margin only ${left.toFixed(2)} mm`);
-  assert.ok(PRESETS.SI15C.length-(pic.x+pic.w)>=4.5,`right margin only ${(PRESETS.SI15C.length-pic.x-pic.w).toFixed(2)} mm`);
+  const right=PRESETS.SI15C.length-(pic.x+pic.w);
+  assert.ok(left>=4.5,`left text margin only ${left.toFixed(2)} mm`);
+  assert.ok(right>=.3 && right<=2,`product right margin ${right.toFixed(2)} mm`);
+});
+test('near-square product art fills the bottom-right corner',()=>{
+  const {pic}=frontBoxes(PRESETS.GE17C);
+  assert.ok(pic.w>=11,`product only ${pic.w.toFixed(2)} mm wide`);
+  assert.ok(pic.h>=11,`product only ${pic.h.toFixed(2)} mm tall`);
+  assert.ok(pic.x+pic.w>=PRESETS.GE17C.length-2,`product right edge ${(pic.x+pic.w).toFixed(2)} mm`);
+  assert.ok(pic.y+pic.h>=PRESETS.GE17C.width-2,`product bottom edge ${(pic.y+pic.h).toFixed(2)} mm`);
 });
 test('front text never overlaps the product drawing',()=>{
   const sizes=[[83,23,16],[32,32,16],[46,46,15],[60,40,20],[40,60,20],[30,30,30]];

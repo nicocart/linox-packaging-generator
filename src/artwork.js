@@ -114,7 +114,7 @@ function precisionWatermark(w,h,side='front'){
 const STACK={ logoHWide:1.5, logoHSquare:1.22, gapModel:.5, subCap:.6, subPitch:1.5 };
 // Short rule under the front wordmark: half the wordmark width. The thicker
 // stroke and generous lower gap separate the logo from the model line.
-const RULE={ widthRatio:.5, gapBefore:.36, gapAfter:.7, thickness:.08 };
+const RULE={ widthRatio:.5, gapBefore:.36, gapAfter:1, thickness:.095 };
 function frontArtwork(config,x,y,w,h){
   const modelFont=config.modelFont ?? config.font;
   const categoryFont=config.categoryFont ?? modelFont;
@@ -123,7 +123,6 @@ function frontArtwork(config,x,y,w,h){
   // Wide faces are long but shallow: use a width-aware side margin so the logo
   // and copy never sit against the crease, and keep a proportional top/bottom margin.
   const padX=Math.max(Math.min(w,h)*.10, w*.06), padY=Math.min(w,h)*.12;
-  const gap=Math.min(w,h)*.05;
   // Width of each element per unit C.
   const modelWPer=textWidth(config.model,modelFont,'heavy',1)/capHeight(modelFont,'heavy',1);
   // Category line width per unit of its own cap height.
@@ -150,22 +149,26 @@ function frontArtwork(config,x,y,w,h){
   const top=(h-logoHt-subStack*C)/2, left=padX;
   const logoW=logoHt/LOGO_RATIO, logoBottom=top+logoHt;
   // Category shares the model column, so the drawing keeps its space on narrow panels.
-  const subCap=Math.min(STACK.subCap*C,textCol/subWPerCap);
+  const subCap=Math.min(STACK.subCap*C,textCol/subWPerCap,wide?Infinity:C*.455);
   const modelBase=logoBottom+logoToModel*C+C;
   const subFs=subCap/capHeight(categoryFont,'medium',1), subBase=modelBase+STACK.gapModel*C+subCap;
   const modelFs=C/capHeight(modelFont,'heavy',1);
   const textRight=left+Math.max(modelWPer*C,subWPerCap*subCap);
   const ruleW=logoW*RULE.widthRatio, ruleY=logoBottom+RULE.gapBefore*C;
   const ruleStroke=Math.max(.1,C*RULE.thickness);
-  // Product drawing in the free area, aligned right; centred vertically in it.
+  // Product art sits close to the right/bottom trim, much tighter than the copy
+  // margin. On near-square faces it is anchored to the bottom-right corner.
+  const artPadX=Math.max(.5,Math.min(w,h)*.04), artPadY=Math.max(.5,Math.min(w,h)*.05);
+  const artGap=Math.min(w,h)*.015;
   const art=ASSETS[CATEGORY[config.category].illustration];
-  const ax0=Math.max(textRight+gap,wide?left+logoW*(1+REG_EXTRA)+gap:0), ax1=w-padX;
-  const ay0=wide?padY:logoBottom+gap, ay1=h-padY;
+  const ax0=Math.max(textRight+artGap,wide?left+logoW*(1+REG_EXTRA)+artGap:0), ax1=w-artPadX;
+  const ay0=wide?artPadY:logoBottom+artGap, ay1=h-artPadY;
   const k=Math.max(0,Math.min((ax1-ax0)/art.width,(ay1-ay0)/art.height));
   const aw=art.width*k, ah=art.height*k;
+  const artX=ax1-aw, artY=wide?ay0+(ay1-ay0-ah)/2:ay1-ah;
   return `<svg x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" viewBox="0 0 ${n(w)} ${n(h)}" overflow="hidden" data-layout="${profile}" data-template="si15c-master">
     ${precisionWatermark(w,h)}
-    ${productPic(config.category,ax1-aw,ay0+(ay1-ay0-ah)/2,aw,ah)}
+    ${productPic(config.category,artX,artY,aw,ah)}
     ${logo(left,top,logoW,{font:modelFont})}
     ${line(left,ruleY,left+ruleW,ruleY,`stroke="#1a1a1a" stroke-width="${n(ruleStroke)}" data-role="front-rule" data-rule-width="${n(ruleW)}"`)}
     ${text(left,modelBase,config.model,modelFs,`${fontAttrs(modelFont,'heavy')} fill="#151515" data-role="model"`)}
