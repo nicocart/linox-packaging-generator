@@ -84,3 +84,25 @@ test('square packages retain existing art templates',()=>{
     assert.match(flat,/href="#back-panel"/);
   }
 });
+
+test('wide SI15C typography and back-panel retain reference hierarchy',()=>{
+  const art=createFlatSvg(PRESETS.SI15C);
+  const front=art.split('data-layout="wide"')[1]?.split('</svg>')[0];
+  const back=art.split('data-layout="wide-back"')[1]?.split('</svg>')[0];
+  assert.ok(front && back);
+  assert.doesNotMatch(front,/stroke="#1a1a1a" stroke-width="/);
+  assert.match(front,/font-weight="900"/);
+  assert.match(back,/CORROSION-RESISTANT/);
+  assert.match(back,/font-weight="900"/);
+  assert.match(back,/ISO9001:2015/);
+  assert.match(back,/MADE IN CHINA/);
+  assert.match(art,/®/);
+  assert.doesNotMatch(markup(art),/NaN|undefined/);
+});
+test('square back labels still use their fixed original graphic',()=>{
+  for(const item of [PRESETS.GE17C,PRESETS['S6004-2RS']]){
+    const art=createFlatSvg(item);
+    assert.match(art,/href="#back-panel"/);
+    assert.doesNotMatch(art,/data-layout="wide-back"/);
+  }
+});
