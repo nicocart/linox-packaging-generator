@@ -138,24 +138,24 @@ function backArtwork(config,x,y,w,h) {
     const bw=Math.min(w*.88,h*.86*width/height), bh=bw*height/width;
     return `<use href="#back-panel" x="${n(x+(w-bw)/2)}" y="${n(y+(h-bh)/2)}" width="${n(bw)}" height="${n(bh)}"/>`;
   }
-  const size=h*.38, markW=Math.min(w*.45,h*2.03), spacing=h*.13;
-  const markX=(w-size-markW-spacing)/2,markY=h*.108;
+  const size=h*.315, markW=Math.min(w*.45,h*1.67), spacing=h*.125;
+  const markX=(w-size-markW-spacing)/2,markY=h*.077;
   const title='CORROSION-RESISTANT',desc='BEARINGS & MOTION COMPONENTS';
-  const titleSize=fitFont(title,h*.185,w*.81,.55);
-  const subSize=fitFont(desc,h*.110,w*.81,.54);
+  const titleSize=fitFont(title,h*.175,w*.81,.55);
+  const subSize=fitFont(desc,h*.099,w*.81,.54);
   return `<svg x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" viewBox="0 0 ${n(w)} ${n(h)}" overflow="hidden" data-layout="wide-back">
     <rect x="${n(w*.063)}" y="${n(h*.036)}" width="${n(w*.874)}" height="${n(h*.926)}" rx="${n(h*.038)}"
       fill="none" stroke="#101010" stroke-width="${n(h*.025)}"/>
     ${bearingSeal(markX,markY,size)}
     ${logo(markX+size+spacing,markY+size*.12,markW,{color:'#101010'})}
-    ${rule(w*.30,h*.477,w*.70,h*.011)}
-    ${text(w*.5,h*.622,title,titleSize,`font-family="Arial Black",Arial,Helvetica,sans-serif font-weight="900" text-anchor="middle" fill="#101010" stroke="#101010" stroke-width="${n(titleSize*.027)}" paint-order="stroke fill" stroke-linejoin="round"`)}
-    ${text(w*.5,h*.727,desc,subSize,'font-family="Arial",Helvetica,sans-serif font-weight="700" text-anchor="middle" fill="#171717"')}
-    ${rule(w*.15,h*.790,w*.30,h*.01)}
-    ${rule(w*.70,h*.790,w*.85,h*.01)}
-    ${text(w*.5,h*.813,'www.linoxbearing.com',h*.091,'font-family="Arial",Helvetica,sans-serif font-weight="700" text-anchor="middle" fill="#171717"')}
-    ${text(w*.5,h*.875,'ISO9001:2015',h*.083,'font-family="Arial",Helvetica,sans-serif font-weight="700" text-anchor="middle" fill="#171717"')}
-    ${text(w*.5,h*.93,'MADE IN CHINA',h*.074,'font-family="Arial",Helvetica,sans-serif font-weight="700" text-anchor="middle" fill="#171717"')}
+    ${rule(w*.30,h*.415,w*.70,h*.012)}
+    ${text(w*.5,h*.595,title,titleSize,`font-family="Arial Black",Arial,Helvetica,sans-serif font-weight="900" text-anchor="middle" fill="#101010" stroke="#101010" stroke-width="${n(titleSize*.027)}" paint-order="stroke fill" stroke-linejoin="round"`)}
+    ${text(w*.5,h*.693,desc,subSize,'font-family="Arial",Helvetica,sans-serif font-weight="700" text-anchor="middle" fill="#171717"')}
+    ${rule(w*.15,h*.782,w*.30,h*.011)}
+    ${rule(w*.70,h*.782,w*.85,h*.011)}
+    ${text(w*.5,h*.793,'www.linoxbearing.com',h*.078,'font-family="Arial",Helvetica,sans-serif font-weight="700" text-anchor="middle" fill="#171717"')}
+    ${text(w*.5,h*.869,'ISO9001:2015',h*.075,'font-family="Arial",Helvetica,sans-serif font-weight="700" text-anchor="middle" fill="#171717"')}
+    ${text(w*.5,h*.94,'MADE IN CHINA',h*.072,'font-family="Arial",Helvetica,sans-serif font-weight="700" text-anchor="middle" fill="#171717"')}
   </svg>`;
 }
 
