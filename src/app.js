@@ -95,7 +95,7 @@ function batchRaw(row){
 }
 function batchSource(raw){
   if(!raw) return '';
-  return [raw.model,CATEGORY[raw.category]?.description??'',raw.length,raw.width,raw.depth,raw.quantity,raw.allowance].join(', ');
+  return [raw.model,CATEGORY[raw.category]?.description??'',raw.length,raw.width,raw.depth,raw.allowance,raw.quantity].join(', ');
 }
 function refreshBatch(){
   batch.items=[];
@@ -157,7 +157,7 @@ function addBatchRow(initial={},focus=false){
   const length=numberInput(initial.length,'如 80'),width=numberInput(initial.width,'如 20'),depth=numberInput(initial.depth,'如 13');
   const quantity=numberInput(initial.quantity??1,'1',1,999999);quantity.step='1';
   const allowance=numberInput(initial.allowance??3,'3',0,30);
-  fields.append(field('型号',model),field('分类',category),field('长',length),field('宽',width),field('高',depth),field('数量',quantity),field('余量',allowance));
+  fields.append(field('型号',model),field('分类',category),field('长',length),field('宽',width),field('高',depth),field('余量',allowance),field('数量',quantity));
   const foot=makeElement('div','batch-item-foot');
   const result=makeElement('span','batch-result','等待输入');
   const actions=makeElement('div','batch-actions');
@@ -271,8 +271,8 @@ async function exportBatch(){
     const errorRows=batch.rows.filter(row=>row.error);
     errorRows.forEach(row=>manifest.push({line:row.line,model:row.raw?.model??'',category:row.raw&&CATEGORY[row.raw.category]?CATEGORY[row.raw.category].description:'',length:row.raw?.length??'',width:row.raw?.width??'',depth:row.raw?.depth??'',quantity:row.raw?.quantity??'',allowance:row.raw?.allowance??'',finalLength:'',finalWidth:'',finalDepth:'',status:`错误：${row.error}`,presentation:'',dieline:'',source:batchSource(row.raw)}));
     manifest.sort((a,b)=>a.line-b.line);
-    const header=['行','型号','分类','输入长','输入宽','输入高','数量','余量','成品长','成品宽','成品高','状态','效果图文件','刀模文件','原始行'];
-    const rows=[header,...manifest.map(row=>[row.line,row.model,row.category,row.length,row.width,row.depth,row.quantity,row.allowance,row.finalLength,row.finalWidth,row.finalDepth,row.status,row.presentation,row.dieline,row.source])];
+    const header=['行','型号','分类','输入长','输入宽','输入高','余量','数量','成品长','成品宽','成品高','状态','效果图文件','刀模文件','原始行'];
+    const rows=[header,...manifest.map(row=>[row.line,row.model,row.category,row.length,row.width,row.depth,row.allowance,row.quantity,row.finalLength,row.finalWidth,row.finalDepth,row.status,row.presentation,row.dieline,row.source])];
     files.push({name:'清单.csv',data:`\uFEFF${rows.map(row=>row.map(csvCell).join(',')).join('\r\n')}`});
     files.push({name:'说明.txt',data:`LINOX 批量导出\n生成时间：${new Date().toLocaleString('zh-CN')}\n有效项：${exported}\n错误行：${errorRows.length}\n目录：效果图/、刀模/、清单.csv\n`});
     download(`LINOX_批量_${batchStamp()}.zip`,createZipBlob(files),'application/zip');
