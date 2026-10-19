@@ -43,6 +43,13 @@ test('product sizing adds allowance to each overall dimension',()=>{
   const d=normalizeInput({model:'SI15C',category:'rod',mode:'product',length:81,width:21,depth:14,allowance:2});
   assert.deepEqual([d.length,d.width,d.depth],[83,23,16]);
 });
+test('quantity defaults to 1 and must be a positive integer',()=>{
+  assert.equal(normalizeInput(PRESETS.SI15C).quantity,1);
+  assert.equal(normalizeInput({...PRESETS.SI15C,quantity:120}).quantity,120);
+  assert.throws(()=>normalizeInput({...PRESETS.SI15C,quantity:0}));
+  assert.throws(()=>normalizeInput({...PRESETS.SI15C,quantity:1.5}));
+  assert.throws(()=>normalizeInput({...PRESETS.SI15C,quantity:1000000}));
+});
 test('SVG exports contain cut/fold groups and mm units',()=>{
   const svg=createFlatSvg(PRESETS.GE17C);
   assert.match(svg,/id="cut"/); assert.match(svg,/id="crease"/);
@@ -65,6 +72,11 @@ test('presentation board renders every preset without invalid numbers',async()=>
     assert(svg.includes(item.model));
     for(const d of [item.length,item.width,item.depth]) assert(svg.includes(`${d} mm`));
   }
+});
+test('quantity is printed on the presentation and PDF page',async()=>{
+  const {createPresentationSvg}=await import('../src/presentation.js');
+  const svg=createPresentationSvg({...PRESETS.SI15C,quantity:42});
+  assert.match(svg,/数量：42/);
 });
 test('dieline flaps and glue tab are closed cut outlines',()=>{
   const d=createDieline(PRESETS.SI15C);
@@ -166,6 +178,7 @@ test('the application displays one full preview, not alternate view tabs',async(
   const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
   const app=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
   assert.match(html,/id="drawing"/);
+  assert.match(html,/id="quantity"/);
   assert.match(html,/id="batch-rows"/);
   assert.match(html,/id="batch-add"/);
   assert.match(html,/id="batch-export"/);

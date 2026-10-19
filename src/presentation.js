@@ -121,7 +121,8 @@ export function createPresentationSvg(raw,{embedFonts=true}={}){
   ${dimH(frontX,frontX+fw,faceY-30,faceY,`${c.length} mm`)}
   ${dimH(sideX,sideX+sw,faceY-30,faceY,`${c.depth} mm`)}
   ${dimV(frontX-26,faceY,faceY+fh,frontX,`${c.width} mm`)}
-  ${openCarton(c)}`;
+  ${openCarton(c)}
+  ${label(PAGE_W-24,30,`数量：${c.quantity}`,{size:14,color:'#4a4a4a',anchor:'end'})}`;
 
   // Printed dieline from the same geometry and artwork code as the production export.
   const flat=createFlatSvg(raw,{withDimensions:false,style:'presentation',embedFonts:false});

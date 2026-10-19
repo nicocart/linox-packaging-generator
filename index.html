@@ -37,11 +37,12 @@
           <label class="radio-option"><input type="radio" name="mode" value="box" checked/><span>纸盒尺寸</span></label>
           <label class="radio-option"><input type="radio" name="mode" value="product"/><span>产品尺寸 + 余量</span></label>
         </div>
-        <div class="dimension-label">长宽高 <span class="unit-tag">mm</span></div>
+        <div class="dimension-label">纸盒尺寸与数量 <span class="unit-tag">mm / 件</span></div>
         <div class="dimension-row">
           <div><label for="length">长</label><input type="number" name="length" id="length" min="8" max="600" step="0.1" value="83" required/></div>
           <div><label for="width">宽</label><input type="number" name="width" id="width" min="8" max="600" step="0.1" value="23" required/></div>
           <div><label for="depth">高</label><input type="number" name="depth" id="depth" min="8" max="600" step="0.1" value="16" required/></div>
+          <div><label for="quantity">数量</label><input type="number" name="quantity" id="quantity" min="1" max="999999" step="1" value="1" required/></div>
         </div>
         <div id="allowance-wrap" hidden><label for="allowance">每个方向增加的总余量 (mm)</label><input type="number" id="allowance" name="allowance" min="0" max="30" step="0.1" value="2"/></div>
         <div class="formula-help" id="formula-help">输入纸盒名义外尺寸。展开图将以毫米计算。</div>
@@ -58,7 +59,7 @@
       <header class="workspace-header"><div><div class="eyebrow">LINOX / 生产工具</div><h1>包装设计生成器</h1><p>一套设计标准，适配不同轴承产品与纸盒尺寸。</p></div><div class="header-buttons"><button type="button" class="light-btn" id="download-json">↓ 导出配置</button><button type="button" class="dark-btn" id="print-pdf">↗ 导出 PDF</button></div></header>
       <section class="workspace-body">
         <div class="summary-grid">
-          <div class="summary-card"><div>当前型号</div><strong id="summary-model">SI15C</strong><small id="summary-category">杆端关节轴承</small></div>
+          <div class="summary-card"><div>当前型号</div><strong id="summary-model">SI15C</strong><small id="summary-category">杆端关节轴承</small><small id="summary-quantity">数量：1 件</small></div>
           <div class="summary-card"><div>成品纸盒尺寸</div><strong id="summary-dims">83 × 23 × 16</strong><small>mm · 长 × 宽 × 高</small></div>
           <div class="summary-card"><div>盒型</div><strong>反向插舌盒</strong><small>反向插舌 · 概念模板</small></div>
         </div>
