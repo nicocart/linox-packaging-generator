@@ -75,6 +75,21 @@ export function getLayoutProfile(width,height) {
 }
 
 // The same fixed SVG image is reused for each category; only its placement changes.
+function diagonalBands(w,h,kind='front') {
+  const tint=kind==='back'?'#cdd1d6':'#cbd0d6';
+  const pts=(p)=>p.map(([xx,yy])=>`${n(xx*w)},${n(yy*h)}`).join(' ');
+  return `<g data-layer="diagonal-branding" fill="${tint}" pointer-events="none">
+    <polygon points="${pts([[.26,1],[.335,1],[.565,0],[.49,0]])}" opacity=".26"/>
+    <polygon points="${pts([[.355,1],[.38,1],[.61,0],[.585,0]])}" opacity=".23"/>
+    <polygon points="${pts([[.79,1],[.975,1],[1.15,0],[.965,0]])}" opacity=".32"/>
+    <polygon points="${pts([[.715,1],[.755,1],[.93,0],[.89,0]])}" opacity=".14"/>
+  </g>`;
+}
+function faceBands(x,y,w,h,kind) {
+  return `<svg x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}"
+    viewBox="0 0 ${n(w)} ${n(h)}" overflow="hidden">${diagonalBands(w,h,kind)}</svg>`;
+}
+
 function wideFrontArtwork(config,x,y,w,h){
   const rows=labelLines(CATEGORY[config.category].label);
   const left=w*.052, twoRows=rows.length>1;
@@ -84,6 +99,7 @@ function wideFrontArtwork(config,x,y,w,h){
   const subSize=Math.min(h*(twoRows?.099:.123),w*.45/(maxRow*.53));
   // Deliberately no two decorative lines; strong model type and spacing.
   return `<svg x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" viewBox="0 0 ${n(w)} ${n(h)}" overflow="hidden" data-layout="wide">
+    ${diagonalBands(w,h,'front')}
     ${productPic(config.category,w*.57,-h*.073,w*.414,h*1.17)}
     ${logo(left,h*.13,markWidth)}
     ${text(left,h*(twoRows?.728:.76),config.model,titleSize,`font-family="Arial Black",Arial,Helvetica,sans-serif font-weight="900" fill="#151515" stroke="#151515" stroke-width="${n(titleSize*.038)}" stroke-linejoin="round" paint-order="stroke fill"`)}
@@ -104,7 +120,7 @@ function frontArtwork(config,x,y,w,h) {
     out+=text(X(22),Y(148),config.model,fitFont(config.model,46*s,250*s),`${FONT} font-weight="600" fill="#151515"`);
     out+=rule(X(22),Y(166),X(132),1.4*s);
     lines.forEach((t,i)=>out+=text(X(22),Y(192+i*24),t,17.5*s,`${FONT} fill="#1d1d1d"`));
-    return `<g data-layout="${profile}">${out}</g>`;
+    return `<g data-layout="${profile}">${faceBands(x,y,w,h,'front')}${out}</g>`;
   }
   const s=Math.min(w/424,h/263), oy=y+(h-263*s)/2, X=v=>x+v*s, Y=v=>oy+v*s;
   const artW=218*s;
@@ -114,7 +130,7 @@ function frontArtwork(config,x,y,w,h) {
   out+=text(X(32),Y(178),config.model,fitFont(config.model,50*s,Math.max(185*s,w-300*s)),`${FONT} font-weight="600" fill="#151515"`);
   out+=rule(X(32),Y(lines.length>1?198:194),X(160),1.5*s);
   lines.forEach((t,i)=>out+=text(X(32),Y((lines.length>1?224:222)+i*27),t,22*s,`${FONT} fill="#1d1d1d"`));
-  return `<g data-layout="landscape">${out}</g>`;
+  return `<g data-layout="landscape">${faceBands(x,y,w,h,'front')}${out}</g>`;
 }
 
 function bearingSeal(x,y,size) {
@@ -133,29 +149,19 @@ function bearingSeal(x,y,size) {
 
 // Wide cartons reflow brand elements instead of uniformly downscaling a square graphic.
 function backArtwork(config,x,y,w,h) {
-  if(getLayoutProfile(w,h)!=='wide'){
-    const {width,height}=ASSETS['back-panel'];
-    const bw=Math.min(w*.88,h*.86*width/height), bh=bw*height/width;
-    return `<use href="#back-panel" x="${n(x+(w-bw)/2)}" y="${n(y+(h-bh)/2)}" width="${n(bw)}" height="${n(bh)}"/>`;
-  }
-  const size=h*.315, markW=Math.min(w*.45,h*1.67), spacing=h*.125;
-  const markX=(w-size-markW-spacing)/2,markY=h*.077;
-  const title='CORROSION-RESISTANT',desc='BEARINGS & MOTION COMPONENTS';
-  const titleSize=fitFont(title,h*.175,w*.81,.55);
-  const subSize=fitFont(desc,h*.099,w*.81,.54);
-  return `<svg x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" viewBox="0 0 ${n(w)} ${n(h)}" overflow="hidden" data-layout="wide-back">
-    <rect x="${n(w*.063)}" y="${n(h*.036)}" width="${n(w*.874)}" height="${n(h*.926)}" rx="${n(h*.038)}"
-      fill="none" stroke="#101010" stroke-width="${n(h*.025)}"/>
-    ${bearingSeal(markX,markY,size)}
-    ${logo(markX+size+spacing,markY+size*.12,markW,{color:'#101010'})}
-    ${rule(w*.30,h*.415,w*.70,h*.012)}
-    ${text(w*.5,h*.595,title,titleSize,`font-family="Arial Black",Arial,Helvetica,sans-serif font-weight="900" text-anchor="middle" fill="#101010" stroke="#101010" stroke-width="${n(titleSize*.027)}" paint-order="stroke fill" stroke-linejoin="round"`)}
-    ${text(w*.5,h*.693,desc,subSize,'font-family="Arial",Helvetica,sans-serif font-weight="700" text-anchor="middle" fill="#171717"')}
-    ${rule(w*.15,h*.782,w*.30,h*.011)}
-    ${rule(w*.70,h*.782,w*.85,h*.011)}
-    ${text(w*.5,h*.793,'www.linoxbearing.com',h*.078,'font-family="Arial",Helvetica,sans-serif font-weight="700" text-anchor="middle" fill="#171717"')}
-    ${text(w*.5,h*.869,'ISO9001:2015',h*.075,'font-family="Arial",Helvetica,sans-serif font-weight="700" text-anchor="middle" fill="#171717"')}
-    ${text(w*.5,h*.94,'MADE IN CHINA',h*.072,'font-family="Arial",Helvetica,sans-serif font-weight="700" text-anchor="middle" fill="#171717"')}
+  const {width,height}=ASSETS['back-panel'];
+  const wide=getLayoutProfile(w,h)==='wide';
+  const maxW=wide?w*.44:w*.88;
+  const maxH=wide?h*.81:h*.86;
+  const bw=Math.min(maxW,maxH*width/height);
+  const bh=bw*height/width;
+  return `<svg x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}"
+    viewBox="0 0 ${n(w)} ${n(h)}" overflow="hidden" data-layout="${wide?'wide-back':'standard-back'}">
+    ${diagonalBands(w,h,'back')}
+    <use href="#back-panel" x="${n((w-bw)/2)}" y="${n((h-bh)/2)}"
+      width="${n(bw)}" height="${n(bh)}"
+      data-brand-badge="compact" data-badge-width="${n(bw)}"
+      data-badge-height="${n(bh)}"/>
   </svg>`;
 }
 
