@@ -90,7 +90,7 @@ function frontArtwork(config,x,y,w,h){
   const profile=getLayoutProfile(w,h),t=clamp01((w/h-1)/2.6);
   const rows=labelLines(CATEGORY[config.category].label);
   const two=rows.length>1,left=w*.052;
-  const logoW=Math.min(w*lerp(.742,.42,t),h*2.55);
+  const logoW=Math.min(w*lerp(.742,.53,t),h*2.55);
   const modelFS=fitFont(config.model,h*lerp(.176,.285,t),w*.47,.56);
   const subFS=Math.min(h*lerp(.075,.122,t),w*.47/(Math.max(...rows.map(a=>a.length))*.53));
   const modelY=h*(two?lerp(.56,.69,t):lerp(.623,.76,t));
