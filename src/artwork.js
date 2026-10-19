@@ -75,93 +75,44 @@ export function getLayoutProfile(width,height) {
 }
 
 // The same fixed SVG image is reused for each category; only its placement changes.
-function diagonalBands(w,h,kind='front') {
-  const tint=kind==='back'?'#cdd1d6':'#cbd0d6';
-  const pts=(p)=>p.map(([xx,yy])=>`${n(xx*w)},${n(yy*h)}`).join(' ');
-  return `<g data-layer="diagonal-branding" fill="${tint}" pointer-events="none">
-    <polygon points="${pts([[.26,1],[.335,1],[.565,0],[.49,0]])}" opacity=".26"/>
-    <polygon points="${pts([[.355,1],[.38,1],[.61,0],[.585,0]])}" opacity=".23"/>
-    <polygon points="${pts([[.79,1],[.975,1],[1.15,0],[.965,0]])}" opacity=".32"/>
-    <polygon points="${pts([[.715,1],[.755,1],[.93,0],[.89,0]])}" opacity=".14"/>
-  </g>`;
-}
-function faceBands(x,y,w,h,kind) {
-  return `<svg x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}"
-    viewBox="0 0 ${n(w)} ${n(h)}" overflow="hidden">${diagonalBands(w,h,kind)}</svg>`;
+const lerp=(a,b,t)=>a+(b-a)*t;
+const clamp01=n=>Math.min(1,Math.max(0,n));
+// Gentle bearing-race watermark: three open-looking circles and one fine accent.
+// It is deliberately quieter than the diagonal striped background.
+function precisionWatermark(w,h,side='front'){
+  const back=side==='back', cx=w*(back?.04:.99), cy=h*(back?.52:.47);
+  const rings=[.52,.78,1.06].map((ratio,i)=>`<circle cx="${n(cx)}" cy="${n(cy)}" r="${n(h*ratio)}" fill="none" stroke="#8894a3" stroke-width="${n(Math.max(.12,h*.0035))}" opacity="${[.20,.14,.10][i]}"/>`).join('');
+  return `<g data-layer="bearing-watermark" pointer-events="none">${rings}</g>`;
 }
 
-function wideFrontArtwork(config,x,y,w,h){
+// SINGLE SI15C-derived design system. Ratio only changes geometric placement.
+function frontArtwork(config,x,y,w,h){
+  const profile=getLayoutProfile(w,h),t=clamp01((w/h-1)/2.6);
   const rows=labelLines(CATEGORY[config.category].label);
-  const left=w*.052, twoRows=rows.length>1;
-  const markWidth=Math.min(w*.53,h*2.57);
-  const titleSize=fitFont(config.model,h*(twoRows?.235:.283),w*.46,.58);
-  const maxRow=Math.max(...rows.map(t=>t.length));
-  const subSize=Math.min(h*(twoRows?.099:.123),w*.45/(maxRow*.53));
-  // Deliberately no two decorative lines; strong model type and spacing.
-  return `<svg x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" viewBox="0 0 ${n(w)} ${n(h)}" overflow="hidden" data-layout="wide">
-    ${diagonalBands(w,h,'front')}
-    ${productPic(config.category,w*.57,-h*.073,w*.414,h*1.17)}
-    ${logo(left,h*.13,markWidth)}
-    ${text(left,h*(twoRows?.728:.76),config.model,titleSize,`font-family="Arial Black",Arial,Helvetica,sans-serif font-weight="900" fill="#151515" stroke="#151515" stroke-width="${n(titleSize*.038)}" stroke-linejoin="round" paint-order="stroke fill"`)}
-    ${rows.map((t,i)=>text(left,h*(twoRows?.83:.943)+i*h*.105,t,subSize,`${FONT} font-weight="600" fill="#252525"`)).join('')}
+  const two=rows.length>1,left=w*.052;
+  const logoW=Math.min(w*lerp(.742,.42,t),h*2.55);
+  const modelFS=fitFont(config.model,h*lerp(.176,.285,t),w*.47,.56);
+  const subFS=Math.min(h*lerp(.075,.122,t),w*.47/(Math.max(...rows.map(a=>a.length))*.53));
+  const modelY=h*(two?lerp(.56,.69,t):lerp(.623,.76,t));
+  const subtitleY=h*(two?lerp(.73,.825,t):lerp(.82,.94,t));
+  const step=h*lerp(.09,.104,t);
+  return `<svg x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" viewBox="0 0 ${n(w)} ${n(h)}" overflow="hidden" data-layout="${profile}" data-template="si15c-master">
+    ${precisionWatermark(w,h)}
+    ${productPic(config.category,w*lerp(.52,.58,t),h*lerp(.44,-.065,t),w*lerp(.46,.405,t),h*lerp(.54,1.13,t))}
+    ${logo(left,h*lerp(.10,.125,t),logoW)}
+    ${text(left,modelY,config.model,modelFS,`font-family="Arial Black",Arial,Helvetica,sans-serif font-weight="900" fill="#151515" stroke="#151515" stroke-width="${n(modelFS*.027)}" paint-order="stroke fill" stroke-linejoin="round"`)}
+    ${rows.map((txt,i)=>text(left,subtitleY+i*step,txt,subFS,`${FONT} font-weight="600" fill="#292929"`)).join('')}
   </svg>`;
 }
 
-function frontArtwork(config,x,y,w,h) {
-  const profile=getLayoutProfile(w,h);
-  if(profile==='wide') return wideFrontArtwork(config,x,y,w,h);
-  const lines=labelLines(CATEGORY[config.category].label);
-  let out='';
-  if (profile==='square' || profile==='compact') {
-    const s=Math.min(w,h)/300, ox=x+(w-300*s)/2, oy=y+(h-300*s)/2, X=v=>ox+v*s, Y=v=>oy+v*s;
-    out+=productPic(config.category,X(136),Y(172),156*s,117*s);
-    out+=logo(X(22),Y(28),222*s);
-    out+=rule(X(22),Y(92),X(132),1.4*s);
-    out+=text(X(22),Y(148),config.model,fitFont(config.model,46*s,250*s),`${FONT} font-weight="600" fill="#151515"`);
-    out+=rule(X(22),Y(166),X(132),1.4*s);
-    lines.forEach((t,i)=>out+=text(X(22),Y(192+i*24),t,17.5*s,`${FONT} fill="#1d1d1d"`));
-    return `<g data-layout="${profile}">${faceBands(x,y,w,h,'front')}${out}</g>`;
-  }
-  const s=Math.min(w/424,h/263), oy=y+(h-263*s)/2, X=v=>x+v*s, Y=v=>oy+v*s;
-  const artW=218*s;
-  out+=productPic(config.category,x+w-artW-10*s,Y(86),artW,artW*.75);
-  out+=logo(X(32),Y(48),262*s);
-  out+=rule(X(32),Y(115),X(160),1.5*s);
-  out+=text(X(32),Y(178),config.model,fitFont(config.model,50*s,Math.max(185*s,w-300*s)),`${FONT} font-weight="600" fill="#151515"`);
-  out+=rule(X(32),Y(lines.length>1?198:194),X(160),1.5*s);
-  lines.forEach((t,i)=>out+=text(X(32),Y((lines.length>1?224:222)+i*27),t,22*s,`${FONT} fill="#1d1d1d"`));
-  return `<g data-layout="landscape">${faceBands(x,y,w,h,'front')}${out}</g>`;
-}
-
-function bearingSeal(x,y,size) {
-  // Closely follows the thick-cage, eight-roller emblem of the source artwork.
-  const cx=x+size/2,cy=y+size/2,r=size*.435;
-  let out='<g fill="none" stroke="#171717" stroke-width="'+n(size*.074)+'">';
-  out+='<circle cx="'+n(cx)+'" cy="'+n(cy)+'" r="'+n(r)+'"/>';
-  out+='<circle cx="'+n(cx)+'" cy="'+n(cy)+'" r="'+n(size*.248)+'" stroke-width="'+n(size*.095)+'"/>';
-  for(let i=0;i<8;i++) {
-    const a=i*Math.PI/4;
-    const px=cx+size*.322*Math.cos(a),py=cy+size*.322*Math.sin(a);
-    out+='<circle cx="'+n(px)+'" cy="'+n(py)+'" r="'+n(size*.085)+'" stroke="none" fill="#171717"/>';
-  }
-  return out+'</g>';
-}
-
-// Wide cartons reflow brand elements instead of uniformly downscaling a square graphic.
-function backArtwork(config,x,y,w,h) {
+// Same original, compact back-panel icon for every carton shape.
+function backArtwork(config,x,y,w,h){
   const {width,height}=ASSETS['back-panel'];
+  const bw=Math.min(w*.86,h*1.25),bh=bw*height/width;
   const wide=getLayoutProfile(w,h)==='wide';
-  const maxW=wide?w*.44:w*.88;
-  const maxH=wide?h*.81:h*.86;
-  const bw=Math.min(maxW,maxH*width/height);
-  const bh=bw*height/width;
-  return `<svg x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}"
-    viewBox="0 0 ${n(w)} ${n(h)}" overflow="hidden" data-layout="${wide?'wide-back':'standard-back'}">
-    ${diagonalBands(w,h,'back')}
-    <use href="#back-panel" x="${n((w-bw)/2)}" y="${n((h-bh)/2)}"
-      width="${n(bw)}" height="${n(bh)}"
-      data-brand-badge="compact" data-badge-width="${n(bw)}"
-      data-badge-height="${n(bh)}"/>
+  return `<svg x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" viewBox="0 0 ${n(w)} ${n(h)}" overflow="hidden" data-layout="${wide?'wide-back':'standard-back'}" data-template="si15c-master">
+    ${precisionWatermark(w,h,'back')}
+    <use href="#back-panel" x="${n((w-bw)/2)}" y="${n((h-bh)/2)}" width="${n(bw)}" height="${n(bh)}" data-brand-badge="compact" data-badge-width="${n(bw)}" data-badge-height="${n(bh)}"/>
   </svg>`;
 }
 
