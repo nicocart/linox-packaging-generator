@@ -90,11 +90,15 @@ export function getLayoutProfile(width,height) {
   return 'landscape';
 }
 
-// Gentle bearing-race watermark: three open-looking circles and one fine accent.
-// It is deliberately quieter than the diagonal striped background.
+// Gentle bearing-race watermark: four open rings anchored in the product third
+// of the face. The radius follows the short side, so long panels do not get a
+// huge clipped arc, and the motif stays visible on both wide and square faces.
 function precisionWatermark(w,h,side='front'){
-  const back=side==='back', cx=w*(back?.04:.99), cy=h*(back?.52:.47);
-  const rings=[.52,.78,1.06].map((ratio,i)=>`<circle cx="${n(cx)}" cy="${n(cy)}" r="${n(h*ratio)}" fill="none" stroke="#8894a3" stroke-width="${n(Math.max(.12,h*.0035))}" opacity="${[.20,.14,.10][i]}"/>`).join('');
+  const back=side==='back';
+  const base=Math.min(w,h);
+  const cx=w*(back?.28:.72), cy=h*.5;
+  const stroke=Math.max(.18,Math.min(.6,base*.006));
+  const rings=[.50,.72,1.00,1.32].map((ratio,i)=>`<circle cx="${n(cx)}" cy="${n(cy)}" r="${n(base*ratio)}" fill="none" stroke="#7f8b99" stroke-width="${n(stroke)}" opacity="${[.30,.22,.15,.09][i]}"/>`).join('');
   return `<g data-layer="bearing-watermark" pointer-events="none">${rings}</g>`;
 }
 

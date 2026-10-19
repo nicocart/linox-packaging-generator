@@ -178,6 +178,27 @@ test('interface copy is Chinese-first, without bilingual micro labels',()=>{
   for(const label of ['产品参数','产品分类','型号','印刷字体','生产工具','实时预览','品牌规范'])
     assert.ok(html.includes(label),`UI missing ${label}`);
 });
+test('background watermark is visible and inset on wide faces',()=>{
+  const svg=createFlatSvg(PRESETS.SI15C);
+  const start=svg.indexOf('data-template="si15c-master"');
+  const front=svg.slice(start,svg.indexOf('</svg>',start));
+  const rings=[...front.matchAll(/<circle cx="([0-9.]+)"[^>]*r="([0-9.]+)"[^>]*opacity="([0-9.]+)"/g)];
+  assert.equal(rings.length,4);
+  const cx=Number(rings[0][1]);
+  assert.ok(cx/PRESETS.SI15C.length>.6 && cx/PRESETS.SI15C.length<.8,`front watermark x ${cx}`);
+  assert.ok(Number(rings[0][3])>=.25,'watermark too faint');
+  const backStart=svg.indexOf('data-layout="wide-back"');
+  const back=svg.slice(backStart,svg.indexOf('</svg>',backStart));
+  const backCx=Number(back.match(/<circle cx="([0-9.]+)"/)[1]);
+  assert.ok(backCx/PRESETS.SI15C.length>.2 && backCx/PRESETS.SI15C.length<.4,`back watermark x ${backCx}`);
+});
+test('print uses the colourful presentation and centers it',()=>{
+  const app=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
+  const css=readFileSync(new URL('../src/styles.css',import.meta.url),'utf8');
+  assert.match(app,/print-pdf[\s\S]*createPresentationSvg/);
+  assert.match(css,/print-color-adjust:exact/);
+  assert.match(css,/#print-sheet\{display:flex!important;align-items:center;justify-content:center/);
+});
 
 test('every downloadable SVG is well-formed XML for every preset',async()=>{
   const {createPresentationSvg}=await import('../src/presentation.js');

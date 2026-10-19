@@ -64,7 +64,7 @@ async function exportWith(action) {
     if (pending) throw pending;
     const raw=currentRaw(), conf=normalizeInput(raw);
     await loadFontDataFor(conf);
-    action(raw);
+    await action(raw);
   } catch(e) { toast(e.message); }
 }
 function filename(raw,type,ext) {
@@ -79,7 +79,13 @@ form.addEventListener('submit',e=>e.preventDefault());
 $('download-presentation').addEventListener('click',()=>exportWith(raw=>download(filename(raw,'presentation','svg'),createPresentationSvg(raw),'image/svg+xml;charset=utf-8')));
 $('download-flat').addEventListener('click',()=>exportWith(raw=>download(filename(raw,'dieline','svg'),createFlatSvg(raw),'image/svg+xml;charset=utf-8')));
 $('download-json').addEventListener('click',()=>safely(raw=>download(filename(raw,'config','json'),JSON.stringify({schema:1,...raw},null,2),'application/json;charset=utf-8')));
-$('print-pdf').addEventListener('click',()=>exportWith(raw=>{$('print-sheet').innerHTML=createFlatSvg(raw);window.print();}));
+$('print-pdf').addEventListener('click',()=>exportWith(async raw=>{
+  $('print-sheet').innerHTML=createPresentationSvg(raw);
+  // Wait for the embedded fonts and data-URI artwork before opening print.
+  await document.fonts.ready;
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  window.print();
+}));
 $('load-json').addEventListener('click',()=>$('json-file').click());
 $('json-file').addEventListener('change',async e=>{
   const file=e.target.files?.[0];if(!file)return;
