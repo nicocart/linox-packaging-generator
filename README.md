@@ -17,7 +17,7 @@
 - 自动生成：前/后/侧三视图、3D 闭盒矢量示意、纸盒展开刀模。展平展开使用标准毫米 SVG `width/height` 与 `viewBox`。
 - 默认预览（效果展示）按参考稿版式绘制：灰色台面上的正面/背面/侧面 + 开盒示意，下方为刀模。所有面、开盒和刀模均按真实长宽高比例绘制（各区域分别缩放适配画面）；生产用的精确毫米刀模请用“刀模 SVG”导出。
 - 印刷字体固定为：**型号 Barlow Semi Condensed，分类 Barlow**（均为 SIL OFL 授权，许可文件在 `assets/fonts/*-LICENSE.txt`）。侧面的型号和尺寸标注沿用型号字体。导出的 SVG 只内嵌这两款字体各 3 个字重（woff2），不依赖本机字体；送印前仍建议在 AI/CorelDRAW 中转曲。
-- 排版按字体真实字宽计算（`src/font-metrics.js`），正面的型号与分类分别按各自字体测量，正面文字不会与产品图重叠。如需更换固定字体：修改 `src/fonts.js` 的 `MODEL_FONT` / `CATEGORY_FONT`，并确保对应 woff2 与 `scripts/measure-fonts.html` 生成的字宽数据齐全。
+- 排版按字体真实字宽计算（`src/font-metrics.js`），正面的型号与分类分别按各自字体测量，正面文字不会与产品图重叠。同一长宽比的面板共用一套比例化字阶：LOGO、型号、分类随面板尺寸缩放；超长型号优先在连字符处换行，避免把整块文字缩小。如需更换固定字体：修改 `src/fonts.js` 的 `MODEL_FONT` / `CATEGORY_FONT`，并确保对应 woff2 与 `scripts/measure-fonts.html` 生成的字宽数据齐全。
 - 分组 `<g id="cut">` 红色裁切、`<g id="crease">` 青色压痕、`<g id="print">` 印刷。浏览器打印按钮提供保存为 PDF 工作流程。
 - 导出 SVG、导入/导出 JSON 配置；浏览器本地自动保存输入数据。
 - 包含 Node 内置测试：`npm test`（无需安装 NPM 依赖）。

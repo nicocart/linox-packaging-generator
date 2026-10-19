@@ -112,6 +112,7 @@ function precisionWatermark(w,h,side='front'){
 // × C; subPitch × subCap. Long cartons carry a larger logo (the established
 // SI15C look); square ones are width-limited, so their logo stays in step with the text.
 const STACK={ logoHWide:1.5, logoHSquare:1.22, gapModel:.5, subCap:.6, subPitch:1.5 };
+const MODEL_PITCH=1.12;
 // Short rule under the front wordmark: half the wordmark width. The thicker
 // stroke and generous lower gap separate the logo from the model line.
 const RULE={ widthRatio:.5, gapBefore:.36, gapAfter:1, thickness:.095 };
@@ -123,37 +124,46 @@ function frontArtwork(config,x,y,w,h){
   // Wide faces are long but shallow: use a width-aware side margin so the logo
   // and copy never sit against the crease, and keep a proportional top/bottom margin.
   const padX=Math.max(Math.min(w,h)*.10, w*.06), padY=Math.min(w,h)*.12;
-  // Width of each element per unit C.
-  const modelWPer=textWidth(config.model,modelFont,'heavy',1)/capHeight(modelFont,'heavy',1);
   // Category line width per unit of its own cap height.
   const subWPerCap=Math.max(...rows.map(r=>textWidth(r,categoryFont,'medium',1)))/capHeight(categoryFont,'medium',1);
   const logoToModel=RULE.gapBefore+RULE.thickness+RULE.gapAfter;
-  const subStack=logoToModel+1+STACK.gapModel+STACK.subCap*(1+(rows.length-1)*STACK.subPitch);
   // Column widths: wide panels keep logo and text in the left ~55%; square
   // panels let the logo span the top and keep text in the left ~60%.
   const textCol=w*(wide?.55:.6)-padX;
-  // Model sets C; the category is STACK.subCap × C unless its own width limits it.
-  const textC=textCol/modelWPer;
+  // A long SKU may wrap at a hyphen instead of shrinking the whole type scale.
+  const modelRows=(()=>{
+    const probeFs=Math.min(w,h)*.12;
+    if (textWidth(config.model,modelFont,'heavy',probeFs)<=textCol) return [config.model];
+    const cut=config.model.lastIndexOf('-');
+    return cut>0&&cut<config.model.length-1
+      ? [config.model.slice(0,cut+1),config.model.slice(cut+1)]
+      : [config.model];
+  })();
+  const modelBlock=1+(modelRows.length-1)*MODEL_PITCH;
+  const subStack=logoToModel+modelBlock+STACK.gapModel+STACK.subCap*(1+(rows.length-1)*STACK.subPitch);
   let C, logoHt;
   if (wide) {
     // Logo is STACK.logoHWide × C; one scale fits the whole block.
     const logoWPer=STACK.logoHWide/LOGO_RATIO*(1+REG_EXTRA);
-    C=Math.min((h-2*padY)/(STACK.logoHWide+subStack), textCol/logoWPer, textC, h*.25);
+    C=Math.min((h-2*padY)/(STACK.logoHWide+subStack), textCol/logoWPer, h*.25);
     logoHt=STACK.logoHWide*C;
   } else {
-    // Logo spans the panel width; text is sized by its own column, so a long
-    // model shrinks only the text, never the brand.
+    // Logo spans the panel width; type scale follows the panel, not the length
+    // of the SKU. A long model is fitted (or hyphen-wrapped) inside the column.
     logoHt=Math.min((w-2*padX)*LOGO_RATIO/(1+REG_EXTRA), h*.17);
-    C=Math.min((h-2*padY-logoHt)/subStack, textC, h*.15, logoHt/STACK.logoHSquare);
+    C=Math.min((h-2*padY-logoHt)/subStack, h*.15, logoHt/STACK.logoHSquare);
   }
   const top=(h-logoHt-subStack*C)/2, left=padX;
   const logoW=logoHt/LOGO_RATIO, logoBottom=top+logoHt;
   // Category shares the model column, so the drawing keeps its space on narrow panels.
   const subCap=Math.min(STACK.subCap*C,textCol/subWPerCap,wide?Infinity:C*.455);
   const modelBase=logoBottom+logoToModel*C+C;
-  const subFs=subCap/capHeight(categoryFont,'medium',1), subBase=modelBase+STACK.gapModel*C+subCap;
-  const modelFs=C/capHeight(modelFont,'heavy',1);
-  const textRight=left+Math.max(modelWPer*C,subWPerCap*subCap);
+  const subFs=subCap/capHeight(categoryFont,'medium',1);
+  const modelFs=fitSize(modelRows.reduce((a,b)=>textWidth(a,modelFont,'heavy',1)>=textWidth(b,modelFont,'heavy',1)?a:b),modelFont,'heavy',C/capHeight(modelFont,'heavy',1),textCol);
+  const modelWidth=Math.max(...modelRows.map(row=>textWidth(row,modelFont,'heavy',modelFs)));
+  const lastModelBase=modelBase+(modelRows.length-1)*MODEL_PITCH*C;
+  const subBase=lastModelBase+STACK.gapModel*C+subCap;
+  const textRight=left+Math.max(modelWidth,subWPerCap*subCap);
   const ruleW=logoW*RULE.widthRatio, ruleY=logoBottom+RULE.gapBefore*C;
   const ruleStroke=Math.max(.1,C*RULE.thickness);
   // Product art sits close to the right/bottom trim, much tighter than the copy
@@ -171,7 +181,8 @@ function frontArtwork(config,x,y,w,h){
     ${productPic(config.category,artX,artY,aw,ah)}
     ${logo(left,top,logoW,{font:modelFont})}
     ${line(left,ruleY,left+ruleW,ruleY,`stroke="#1a1a1a" stroke-width="${n(ruleStroke)}" data-role="front-rule" data-rule-width="${n(ruleW)}"`)}
-    ${text(left,modelBase,config.model,modelFs,`${fontAttrs(modelFont,'heavy')} fill="#151515" data-role="model"`)}
+    ${text(left,modelBase,modelRows[0],modelFs,`${fontAttrs(modelFont,'heavy')} fill="#151515" data-role="model"`)}
+    ${modelRows.slice(1).map((t,i)=>text(left,modelBase+(i+1)*MODEL_PITCH*C,t,modelFs,`${fontAttrs(modelFont,'heavy')} fill="#151515" data-role="model"`)).join('')}
     ${rows.map((t,i)=>text(left,subBase+i*STACK.subPitch*subCap,t,subFs,`${fontAttrs(categoryFont,'medium')} fill="#292929" data-role="category"`)).join('')}
   </svg>`;
 }

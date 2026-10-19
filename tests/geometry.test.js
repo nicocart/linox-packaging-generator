@@ -255,6 +255,17 @@ test('near-square product art fills the bottom-right corner',()=>{
   assert.ok(pic.x+pic.w>=PRESETS.GE17C.length-2,`product right edge ${(pic.x+pic.w).toFixed(2)} mm`);
   assert.ok(pic.y+pic.h>=PRESETS.GE17C.width-2,`product bottom edge ${(pic.y+pic.h).toFixed(2)} mm`);
 });
+test('1:1 faces share one proportional type scale',()=>{
+  const ge=frontBoxes(PRESETS.GE17C), s6=frontBoxes(PRESETS['S6004-2RS']);
+  const model=x=>x.lines.find(l=>l.role==='model');
+  const category=x=>x.lines.find(l=>l.role==='category');
+  const geModel=model(ge).size/PRESETS.GE17C.length, s6Model=model(s6).size/PRESETS['S6004-2RS'].length;
+  const geCat=category(ge).size/PRESETS.GE17C.length, s6Cat=category(s6).size/PRESETS['S6004-2RS'].length;
+  assert.ok(Math.abs(geModel-s6Model)<.002,`model scale ${geModel.toFixed(4)} vs ${s6Model.toFixed(4)}`);
+  assert.ok(Math.abs(geCat-s6Cat)<.002,`category scale ${geCat.toFixed(4)} vs ${s6Cat.toFixed(4)}`);
+  // The long SKU wraps at its hyphen instead of shrinking the shared type scale.
+  assert.equal(s6.lines.filter(l=>l.role==='model').length,2);
+});
 test('front text never overlaps the product drawing',()=>{
   const sizes=[[83,23,16],[32,32,16],[46,46,15],[60,40,20],[40,60,20],[30,30,30]];
   const models=['SI15C','GE17C','S6004-2RS','GEG120ES-2RS'];
