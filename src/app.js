@@ -201,6 +201,38 @@ const csvCell=value=>{
   const text=String(value??'');
   return /[",\r\n]/.test(text)?`"${text.replaceAll('"','""')}"`:text;
 };
+async function printBatch(){
+  refreshBatch();
+  if(!batch.items.length){toast('没有可导出的数据行');return;}
+  const button=$('batch-export');
+  button.disabled=true;
+  try{
+    const conf=normalizeInput(batch.items[0].raw);
+    await loadFontDataFor(conf);
+    const sheet=$('print-sheet');
+    sheet.className='batch-print';
+    document.documentElement.classList.add('batch-print');
+    document.body.classList.add('batch-print');
+    sheet.innerHTML=batch.items.map(item=>`<section class="print-page">${createPresentationSvg(item.raw)}</section>`).join('');
+    const skipped=batch.rows.filter(row=>row.error).length;
+    $('batch-status').textContent=`已准备 ${batch.items.length} 页${skipped?`，跳过 ${skipped} 行`:''}，请在打印窗口选择“另存为 PDF”`;
+    await document.fonts.ready;
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    const previousTitle=document.title;
+    document.title=`LINOX_批量_${batchStamp()}`;
+    window.print();
+    setTimeout(()=>{
+      document.title=previousTitle;
+      document.documentElement.classList.remove('batch-print');
+      document.body.classList.remove('batch-print');
+    },1000);
+  }catch(error){
+    $('batch-status').textContent=`PDF 准备失败：${error.message}`;
+    toast(`PDF 准备失败：${error.message}`);
+  }finally{
+    button.disabled=batch.items.length===0;
+  }
+}
 async function exportBatch(){
   refreshBatch();
   if(!batch.items.length){toast('没有可导出的数据行');return;}
@@ -256,11 +288,15 @@ form.addEventListener('input',()=>{updateSizing();render();});
 form.addEventListener('change',()=>{updateSizing();render();});
 form.addEventListener('submit',e=>e.preventDefault());
 $('batch-add').addEventListener('click',()=>addBatchRow({category:'rod',allowance:3},true));
-$('batch-export').addEventListener('click',exportBatch);
+$('batch-export').addEventListener('click',printBatch);
+$('batch-export-svg').addEventListener('click',exportBatch);
 $('download-presentation').addEventListener('click',()=>exportWith(raw=>download(filename(raw,'presentation','svg'),createPresentationSvg(raw),'image/svg+xml;charset=utf-8')));
 $('download-flat').addEventListener('click',()=>exportWith(raw=>download(filename(raw,'dieline','svg'),createFlatSvg(raw),'image/svg+xml;charset=utf-8')));
 $('download-json').addEventListener('click',()=>safely(raw=>download(filename(raw,'config','json'),JSON.stringify({schema:1,...raw},null,2),'application/json;charset=utf-8')));
 $('print-pdf').addEventListener('click',()=>exportWith(async raw=>{
+  $('print-sheet').className='';
+  document.documentElement.classList.remove('batch-print');
+  document.body.classList.remove('batch-print');
   $('print-sheet').innerHTML=createPresentationSvg(raw);
   // Wait for the embedded fonts and data-URI artwork before opening print.
   await document.fonts.ready;

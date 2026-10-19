@@ -169,6 +169,7 @@ test('the application displays one full preview, not alternate view tabs',async(
   assert.match(html,/id="batch-rows"/);
   assert.match(html,/id="batch-add"/);
   assert.match(html,/id="batch-export"/);
+  assert.match(html,/id="batch-export-svg"/);
   assert.match(html,/下载|导出/);
   assert.doesNotMatch(html,/data-tab=|class="tabs"/);
   assert.doesNotMatch(app,/activeTab|createIsoSvg|createViewsSvg/);
@@ -199,8 +200,11 @@ test('print uses the colourful presentation and centers it',()=>{
   const app=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
   const css=readFileSync(new URL('../src/styles.css',import.meta.url),'utf8');
   assert.match(app,/print-pdf[\s\S]*createPresentationSvg/);
+  assert.match(app,/batch-print/);
   assert.match(css,/print-color-adjust:exact/);
   assert.match(css,/#print-sheet\{display:flex!important;align-items:center;justify-content:center/);
+  assert.match(css,/#print-sheet\.batch-print \.print-page\{/);
+  assert.match(css,/page-break-after:always/);
   // Nested face SVGs must keep their own clipping; a broad overflow rule made
   // watermarks spill across the whole printed page.
   assert.match(css,/#print-sheet svg svg,#drawing svg svg\{overflow:hidden!important\}/);
