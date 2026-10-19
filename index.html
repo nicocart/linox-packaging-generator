@@ -62,7 +62,22 @@
           <div class="summary-card"><div>成品纸盒尺寸</div><strong id="summary-dims">83 × 23 × 16</strong><small>mm · 长 × 宽 × 高</small></div>
           <div class="summary-card"><div>盒型</div><strong>反向插舌盒</strong><small>反向插舌 · 概念模板</small></div>
         </div>
-        <div class="preview-card">
+        <section class="batch-card" id="batch-card">
+          <div class="batch-head">
+            <div><span class="eyebrow">批量生成</span><h2>一次生成多个包装</h2><p>每行一条：型号, 分类, 长, 宽, 高, 余量（可选）。批量默认按“产品尺寸 + 余量”计算，导出压缩包包含效果图、刀模图和清单。</p></div>
+            <div class="batch-tools">
+              <label for="batch-allowance">默认余量 <input id="batch-allowance" type="number" min="0" max="30" step="0.1" value="3"/> mm</label>
+              <button type="button" class="accent-btn" id="batch-export">↓ 批量导出压缩包</button>
+            </div>
+          </div>
+          <textarea id="batch-input" rows="5" spellcheck="false"># 型号, 分类, 长, 宽, 高, 余量(可选)
+SI15C, 杆端, 80, 20, 13
+GE17C, 向心, 29, 29, 13
+S6004-2RS, 深沟, 43, 43, 12</textarea>
+          <div class="batch-meta"><span id="batch-status">正在解析…</span><span>分类支持：杆端 / 向心 / 深沟</span></div>
+          <div id="batch-list" class="batch-list"></div>
+        </section>
+        <div class="preview-card" id="preview-card">
           <div class="preview-header"><div><span class="eyebrow">实时预览</span><h2>包装全景预览 · 四视图与刀模展开</h2></div></div>
           <div class="preview-viewport"><div class="viewport-top"><span class="viewport-label"><span class="live-dot"></span> 矢量预览</span><span id="scale-note">精确毫米矢量绘制</span></div><div id="drawing" aria-live="polite"></div><div class="viewport-bottom"><span>◉ 白卡双插舌结构</span><span id="drawing-caption">前 / 后 / 侧面</span></div></div>
           <div class="preview-footer"><div class="legend"><span><i class="legend-line cut"></i>裁切</span><span><i class="legend-line crease"></i>压痕</span><span><i class="legend-line ink"></i>印刷</span></div><div class="download-buttons"><button type="button" class="light-btn" id="download-presentation">↓ 效果展示图</button><button type="button" class="accent-btn" id="download-flat">↓ 刀模图</button></div></div>
