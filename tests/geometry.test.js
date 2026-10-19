@@ -125,7 +125,7 @@ test('long carton keeps bold front and uses the original compact badge',()=>{
   const bh=Number(back.match(/data-badge-height="([0-9.]+)"/)?.[1]);
   assert.ok(bw>0 && bw/PRESETS.SI15C.length<.45);
   assert.ok(bh>0 && bh/PRESETS.SI15C.width<=.82);
-  assert.match(art,/®/);
+  assert.match(art,/data-role="registered"/);
   assert.doesNotMatch(markup(art),/NaN|undefined/);
 });
 test('decoration and open-box printing are present in presentation exports',async()=>{
@@ -198,10 +198,11 @@ test('unknown fonts are rejected and the default is Barlow',()=>{
 /** Front-panel text and drawing boxes, read back from the generated SVG. */
 function frontBoxes(cfg){
   const svg=createFlatSvg(cfg);
-  const front=svg.slice(svg.indexOf('data-template="si15c-master"'));
+  const start=svg.indexOf('data-template="si15c-master"');
+  const front=svg.slice(start,svg.indexOf('</svg>',start));
   const num=(s,k)=>Number(s.match(new RegExp(`${k}="([-0-9.]+)"`))[1]);
   const pic=front.match(/<use href="#pic-[^>]+>/)[0];
-  const texts=[...front.matchAll(/<text ([^>]+)>([^<]*)<\/text>/g)].filter(t=>/data-role/.test(t[1]));
+  const texts=[...front.matchAll(/<text ([^>]+)>([^<]*)<\/text>/g)].filter(t=>/data-role="(model|category)"/.test(t[1]));
   const roleOf=a=>a.match(/data-role="(\w+)"/)[1];
   const lines=texts.map(([,a,str])=>{
     const role=roleOf(a)==='model'?'heavy':'medium', size=num(a,'font-size'), x=num(a,'x'), y=num(a,'y');
@@ -231,5 +232,39 @@ test('square fronts keep compact line spacing',()=>{
     const gap=(subs[0].y-subs[0].cap-model.y)/model.cap;
     assert.ok(gap>.3 && gap<.8,`${length}x${width}: model→category gap ${gap.toFixed(2)}× cap`);
     if(subs.length>1) assert.ok((subs[1].y-subs[0].y)/subs[0].size<1.4,'category line pitch too loose');
+  }
+});
+
+test('® is a vector ring plus R in the print font, large enough to read',()=>{
+  for(const font of Object.keys(FONTS)){
+    const svg=createFlatSvg({...PRESETS.SI15C,font});
+    assert.doesNotMatch(markup(svg),/®/,'a typed ® would fall back to a system font');
+    const marks=[...svg.matchAll(/<g data-role="registered"><circle [^>]*r="([0-9.]+)"/g)].map(m=>Number(m[1]));
+    assert.equal(marks.length,3,'front + two sides');
+    // Side panel 16 × 23 mm: the ring must still be ≥ 1 mm across.
+    assert.ok(Math.min(...marks)*2>=1,`${font}: smallest ® ${Math.min(...marks)*2} mm`);
+  }
+});
+test('side panel centres logo and model on the same line',()=>{
+  for(const item of Object.values(PRESETS)){
+    const svg=createFlatSvg(item), d=createDieline(item);
+    const side=svg.slice(svg.indexOf('data-role="side"')).split('</g></g>')[0];
+    const tf=side.match(/translate\(([-0-9.]+) [-0-9.]+\) scale\(([0-9.]+)\)/);
+    const logoX=Number(tf[1]), logoW=305.871*Number(tf[2]);
+    const ring=side.match(/<circle cx="([-0-9.]+)"[^>]*r="([0-9.]+)"[^>]*stroke-width="([0-9.]+)"/);
+    const regRight=Number(ring[1])+Number(ring[2])/.92;
+    const model=Number(side.match(/<text x="([-0-9.]+)"[^>]*data-role="side-model"/)[1]);
+    const mid=d.panels.sideA.h/2;
+    assert.ok(Math.abs((logoX+regRight)/2-mid)<.05,`${item.model}: logo centre ${(logoX+regRight)/2} vs ${mid}`);
+    assert.ok(Math.abs(model-mid)<.01,`${item.model}: model centre ${model} vs ${mid}`);
+    assert.ok(logoW/d.panels.sideA.h>.55,`${item.model}: side logo only ${(logoW/d.panels.sideA.h*100).toFixed(0)}% of panel length`);
+  }
+});
+test('category line is at least half the model cap height',()=>{
+  for(const item of Object.values(PRESETS)){
+    const {lines}=frontBoxes({...item,font:'barlow'});
+    const model=lines.find(l=>l.role==='model'), sub=lines.find(l=>l.role==='category');
+    // Target is 0.6×; on a 32 mm square face "Radial Spherical" is width-limited to ~0.48×.
+    assert.ok(sub.cap/model.cap>=.45,`${item.model}: category ${(sub.cap/model.cap).toFixed(2)}× model cap`);
   }
 });

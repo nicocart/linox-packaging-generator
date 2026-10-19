@@ -40,15 +40,27 @@ const WORDMARK_BOX = { x: 9.2148, y: 7.5742, w: 305.871, h: 51.961 };
 const LINOX_RED = '#e60012';
 const LOGO_RATIO = WORDMARK_BOX.h / WORDMARK_BOX.w;
 
-/** LINOX wordmark at (x,y) top-left, `w` wide. ® sits outside `w`, top right, in the print font. */
-export function logo(x,y,w,{color=LINOX_RED,registered=true,font}={}) {
-  const k=w/WORDMARK_BOX.w;
-  const regSize=w*.066, regColor=color===LINOX_RED?'#171717':color;
-  const registeredMark=registered?text(x+w+regSize*.10,y+regSize*.88,'®',regSize,`${fontAttrs(font,'medium')} fill="${regColor}"`):'';
-  return `<g transform="translate(${n(x)} ${n(y)}) scale(${n(k)}) translate(${-WORDMARK_BOX.x} ${-WORDMARK_BOX.y})" fill="${color}"><path d="${WORDMARK_PATH}"/></g>${registeredMark}`;
+/**
+ * ® drawn as vector: a ring plus the chosen font's "R", centred by its real
+ * cap height and advance width. The print fonts' web subsets carry no ®
+ * glyph, so a typed ® would silently fall back to a system font.
+ */
+const REG_SIZE=.42;  // ring diameter / wordmark height
+const REG_GAP=.12;   // gap before the ring / ring diameter
+function registeredMark(x,top,d,color,font){
+  const r=d/2, cx=x+r, cy=top+r, fs=d*.62/capHeight(font,'medium',1);
+  const rx=cx-textWidth('R',font,'medium',fs)/2, ry=cy+capHeight(font,'medium',fs)/2;
+  return `<g data-role="registered"><circle cx="${n(cx)}" cy="${n(cy)}" r="${n(r*.92)}" fill="none" stroke="${color}" stroke-width="${n(d*.08)}"/>${text(rx,ry,'R',fs,`${fontAttrs(font,'medium')} fill="${color}"`)}</g>`;
 }
-/** Horizontal room the ® glyph takes beyond the wordmark, as a fraction of logo width. */
-const REG_EXTRA=.066*1.1;
+/** Horizontal room ® takes beyond the wordmark, as a fraction of logo width. */
+const REG_EXTRA=REG_SIZE*(1+REG_GAP)*WORDMARK_BOX.h/WORDMARK_BOX.w;
+
+/** LINOX wordmark at (x,y) top-left, `w` wide; ® sits outside `w`, top-aligned. */
+export function logo(x,y,w,{color=LINOX_RED,registered=true,font}={}) {
+  const k=w/WORDMARK_BOX.w, d=REG_SIZE*w*LOGO_RATIO;
+  const mark=registered?registeredMark(x+w+d*REG_GAP,y,d,color===LINOX_RED?'#171717':color,font):'';
+  return `<g transform="translate(${n(x)} ${n(y)}) scale(${n(k)}) translate(${-WORDMARK_BOX.x} ${-WORDMARK_BOX.y})" fill="${color}"><path d="${WORDMARK_PATH}"/></g>${mark}`;
+}
 
 function productPic(category,x,y,w,h,{shaded=false}={}) {
   const key=CATEGORY[category].illustration;
@@ -99,7 +111,7 @@ function precisionWatermark(w,h,side='front'){
  */
 // × C; subPitch × subCap. Long cartons carry a larger logo (the established
 // SI15C look); square ones are width-limited, so their logo stays in step with the text.
-const STACK={ logoHWide:1.5, logoHSquare:1.22, gapLogo:.62, gapModel:.5, subCap:.42, subPitch:1.62 };
+const STACK={ logoHWide:1.5, logoHSquare:1.22, gapLogo:.62, gapModel:.5, subCap:.6, subPitch:1.5 };
 function frontArtwork(config,x,y,w,h){
   const f=config.font, rows=labelLines(CATEGORY[config.category].label);
   const profile=getLayoutProfile(w,h), wide=w/h>=1.6;
@@ -107,13 +119,14 @@ function frontArtwork(config,x,y,w,h){
   // Width of each element per unit C.
   const capPer=role=>capHeight(f,role,1);
   const modelWPer=textWidth(config.model,f,'heavy',1)/capPer('heavy');
-  const subFsPer=STACK.subCap/capPer('regular');
-  const subWPer=Math.max(...rows.map(r=>textWidth(r,f,'medium',1)))*subFsPer;
+  // Category line width per unit of its own cap height.
+  const subWPerCap=Math.max(...rows.map(r=>textWidth(r,f,'medium',1)))/capPer('medium');
   const subStack=STACK.gapLogo+1+STACK.gapModel+STACK.subCap*(1+(rows.length-1)*STACK.subPitch);
   // Column widths: wide panels keep logo and text in the left ~55%; square
   // panels let the logo span the top and keep text in the left ~60%.
   const textCol=w*(wide?.55:.6)-pad;
-  const textC=textCol/Math.max(modelWPer,subWPer);
+  // Model sets C; the category is STACK.subCap × C unless its own width limits it.
+  const textC=textCol/modelWPer;
   let C, logoHt;
   if (wide) {
     // Logo is STACK.logoHWide × C; one scale fits the whole block.
@@ -128,10 +141,12 @@ function frontArtwork(config,x,y,w,h){
   }
   const top=(h-logoHt-subStack*C)/2, left=pad;
   const logoW=logoHt/LOGO_RATIO, logoBottom=top+logoHt;
+  // Category shares the model column, so the drawing keeps its space on narrow panels.
+  const subCap=Math.min(STACK.subCap*C,textCol/subWPerCap);
   const modelBase=logoBottom+STACK.gapLogo*C+C;
-  const subFs=subFsPer*C, subBase=modelBase+STACK.gapModel*C+STACK.subCap*C;
+  const subFs=subCap/capPer('medium'), subBase=modelBase+STACK.gapModel*C+subCap;
   const modelFs=C/capPer('heavy');
-  const textRight=left+Math.max(modelWPer,subWPer)*C;
+  const textRight=left+Math.max(modelWPer*C,subWPerCap*subCap);
   // Product drawing in the free area, aligned right; centred vertically in it.
   const art=ASSETS[CATEGORY[config.category].illustration];
   const ax0=Math.max(textRight+gap,wide?left+logoW*(1+REG_EXTRA)+gap:0), ax1=w-pad*.6;
@@ -143,7 +158,7 @@ function frontArtwork(config,x,y,w,h){
     ${productPic(config.category,ax1-aw,ay0+(ay1-ay0-ah)/2,aw,ah)}
     ${logo(left,top,logoW,{font:f})}
     ${text(left,modelBase,config.model,modelFs,`${fontAttrs(f,'heavy')} fill="#151515" data-role="model"`)}
-    ${rows.map((t,i)=>text(left,subBase+i*STACK.subPitch*STACK.subCap*C,t,subFs,`${fontAttrs(f,'medium')} fill="#292929" data-role="category"`)).join('')}
+    ${rows.map((t,i)=>text(left,subBase+i*STACK.subPitch*subCap,t,subFs,`${fontAttrs(f,'medium')} fill="#292929" data-role="category"`)).join('')}
   </svg>`;
 }
 
@@ -159,19 +174,28 @@ function backArtwork(config,x,y,w,h){
 }
 
 /**
- * Side panel: wordmark and model rotated 90° so they read top-to-bottom, the
- * model sitting left of the logo and end-aligned with it (reference 105 × 263).
+ * Side panel: LINOX® and model in two lines, both centred on the panel's long
+ * centre line. On tall panels the pair is rotated to read top-to-bottom, with
+ * the logo toward the right edge, as on the reference cartons.
  */
 function sideArtwork(config,x,y,w,h){
-  const f=config.font, modelAttrs=`${fontAttrs(f,'medium')} text-anchor="end" fill="#151515"`;
-  if (w>h) {
-    const s=Math.min(h/105,w/263), ox=x+(w-263*s)/2;
-    return `<g>${logo(ox+65*s,y+h/2-30*s,113*s,{font:f})}${text(ox+186*s,y+h/2+28*s,config.model,fitSize(config.model,f,'medium',27*s,150*s),modelAttrs)}</g>`;
-  }
-  // The 135-unit composition is centred along the panel, as on the reference.
-  const s=Math.min(h/175,w/105), ox=(h-135*s)/2, oy=(w-105*s)/2;
-  const logoW=113*s, end=ox+logoW+8*s;
-  return `<g transform="translate(${n(x+w)} ${n(y)}) rotate(90)">${logo(ox,oy+29*s,logoW,{font:f})}${text(end,oy+82*s,config.model,fitSize(config.model,f,'medium',27*s,150*s),modelAttrs)}</g>`;
+  const f=config.font, tall=h>=w;
+  const len=tall?h:w, across=tall?w:h;           // along / across the reading direction
+  const pad=Math.min(len,across)*.1;
+  // Logo (with ®) takes up to 72% of the length; its height is capped so the
+  // logo and model lines together fit across the panel.
+  const ratio=LOGO_RATIO/(1+REG_EXTRA);           // logo height per unit total length
+  const modelPer=.82;                             // model cap height / logo height
+  const gapPer=.42;                               // line gap / logo height
+  const lh=Math.min(len*.72*ratio,(across-2*pad)/(1+gapPer+modelPer));
+  const logoW=lh/LOGO_RATIO, total=logoW*(1+REG_EXTRA);
+  const modelFs=fitSize(config.model,f,'heavy',lh*modelPer/capHeight(f,'heavy',1),total);
+  const block=lh+gapPer*lh+capHeight(f,'heavy',modelFs);
+  const top=(across-block)/2, mid=len/2;
+  const art=`${logo(mid-total/2,top,logoW,{font:f})}${text(mid,top+lh+gapPer*lh+capHeight(f,'heavy',modelFs),config.model,modelFs,`${fontAttrs(f,'heavy')} text-anchor="middle" fill="#151515" data-role="side-model"`)}`;
+  return tall
+    ? `<g transform="translate(${n(x+w)} ${n(y)}) rotate(90)" data-role="side">${art}</g>`
+    : `<g transform="translate(${n(x)} ${n(y)})" data-role="side">${art}</g>`;
 }
 
 export function printArtwork(config,layout) {
