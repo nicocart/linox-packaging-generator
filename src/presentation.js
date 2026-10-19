@@ -1,5 +1,5 @@
 import { normalizeInput } from './geometry.js';
-import { artDefs, createFlatSvg, productArtworkForPreview, previewFaceArtwork, logo } from './artwork.js';
+import { artDefs, createFlatSvg, productArtworkForPreview, previewFaceArtwork } from './artwork.js';
 
 /*
  * Presentation board in the layout of the approved reference sheets: front,
@@ -79,21 +79,10 @@ function openCarton(config){
   // Project an actual printed face onto the upright front wall of the open carton.
   // The side and interior remain dimensionally generated; no AI graphics.
   const [faceOX,faceOY]=P(0,0,H);
-  const faceMarkW=Math.min(L*.365,H*1.39);
-  const faceModelSize=Math.min(H*.226,L*.095);
+  // Open-carton printing uses the same SI15C master front artwork as the
+  // primary view and dieline; no independently hard-coded graphics.
   const frontPrint=`<g data-open-box-print="true" transform="matrix(${v(ex[0])} ${v(ex[1])} 0 1 ${v(faceOX)} ${v(faceOY)})">
-    <svg width="${v(L)}" height="${v(H)}" viewBox="0 0 ${v(L)} ${v(H)}" overflow="hidden">
-      <g fill="#cbd0d6" pointer-events="none">
-        <polygon points="${v(L*.37)},${v(H)} ${v(L*.45)},${v(H)} ${v(L*.68)},0 ${v(L*.60)},0" opacity=".28"/>
-        <polygon points="${v(L*.73)},${v(H)} ${v(L*.95)},${v(H)} ${v(L*1.12)},0 ${v(L*.90)},0" opacity=".32"/>
-      </g>
-      ${logo(L*.05,H*.13,faceMarkW)}
-      ${label(L*.05,H*.67,config.model,{size:faceModelSize,color:'#121212',anchor:'start',weight:'800'})}
-      ${label(L*.05,H*.88,config.category==='rod'?'Rod End':config.category==='radial'?'Spherical Plain':'Deep Groove',{size:H*.112,color:'#242424',anchor:'start'})}
-      <g transform="translate(${v(L*.61)} ${v(H*.07)})">
-        ${productArtworkForPreview(config.category,L*.33,H*.74,{shaded:false})}
-      </g>
-    </svg>
+    ${previewFaceArtwork(config,'front',L,H)}
   </g>`;
 
   const right=poly([P(L,0,0),P(L,D,0),P(L,D,H),P(L,0,H)],'fill="url(#wallSide)" stroke="#a5a6a9" stroke-width="1.2" stroke-linejoin="round"');
