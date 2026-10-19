@@ -36,9 +36,13 @@ const FONT = `font-family="Barlow,'Segoe UI',Arial,sans-serif"`;
 
 /** LINOX wordmark at (x,y) top-left, `w` wide. ® sits outside `w`, top right. */
 export function logo(x,y,w,{color=LINOX_RED,registered=true}={}) {
-  const k=w/WORDMARK_BOX.w, r=w*.03, ink=color===LINOX_RED?'#1a1a1a':color;
-  const mark=registered?`<g fill="none" stroke="${ink}" stroke-width="${n(r*.16)}"><circle cx="${n(x+w+r*1.9)}" cy="${n(y+r*1.1)}" r="${n(r)}"/></g>${text(x+w+r*1.9,y+r*1.5,'R',r*1.15,`${FONT} font-weight="700" text-anchor="middle" fill="${ink}"`)}`:'';
-  return `<g transform="translate(${n(x)} ${n(y)}) scale(${n(k)}) translate(${-WORDMARK_BOX.x} ${-WORDMARK_BOX.y})" fill="${color}"><path d="${WORDMARK_PATH}"/></g>${mark}`;
+  const k=w/WORDMARK_BOX.w;
+  const regSize=w*.066, regColor=color===LINOX_RED?'#171717':color;
+  // A real registered trademark glyph. Avoid a disjoint circle and letter R.
+  const registeredMark=registered?text(x+w+regSize*.10,y+regSize*.88,'®',regSize,
+    'font-family="Arial,Helvetica,sans-serif" font-weight="700" fill="'+regColor+'"'):'';
+  return '<g transform="translate('+n(x)+' '+n(y)+') scale('+n(k)+') translate('+
+    (-WORDMARK_BOX.x)+' '+(-WORDMARK_BOX.y)+')" fill="'+color+'"><path d="'+WORDMARK_PATH+'"/></g>'+registeredMark;
 }
 
 function productPic(category,x,y,w,h,{shaded=false}={}) {
@@ -73,19 +77,17 @@ export function getLayoutProfile(width,height) {
 // The same fixed SVG image is reused for each category; only its placement changes.
 function wideFrontArtwork(config,x,y,w,h){
   const rows=labelLines(CATEGORY[config.category].label);
-  // No decorative horizontal rules: typography and whitespace separate
-  // the trademark, model and product class on elongated cartons.
-  const left=w*.052;
-  const twoRows=rows.length>1;
-  const markWidth=Math.min(w*.53,h*2.62);
-  const titleSize=fitFont(config.model,h*(twoRows?.215:.238),w*.47,.56);
+  const left=w*.052, twoRows=rows.length>1;
+  const markWidth=Math.min(w*.53,h*2.57);
+  const titleSize=fitFont(config.model,h*(twoRows?.235:.283),w*.46,.58);
   const maxRow=Math.max(...rows.map(t=>t.length));
-  const subSize=Math.min(h*(twoRows?.091:.113),w*.45/(maxRow*.53));
+  const subSize=Math.min(h*(twoRows?.099:.123),w*.45/(maxRow*.53));
+  // Deliberately no two decorative lines; strong model type and spacing.
   return `<svg x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" viewBox="0 0 ${n(w)} ${n(h)}" overflow="hidden" data-layout="wide">
-    ${productPic(config.category,w*.570,-h*.073,w*.414,h*1.17)}
+    ${productPic(config.category,w*.57,-h*.073,w*.414,h*1.17)}
     ${logo(left,h*.13,markWidth)}
-    ${text(left,h*(twoRows?.72:.755),config.model,titleSize,`${FONT} font-weight="700" fill="#151515"`)}
-    ${rows.map((t,i)=>text(left,h*(twoRows?.826:.934)+i*h*.108,t,subSize,`${FONT} fill="#242424"`)).join('')}
+    ${text(left,h*(twoRows?.728:.76),config.model,titleSize,`font-family="Arial Black",Arial,Helvetica,sans-serif font-weight="900" fill="#151515" stroke="#151515" stroke-width="${n(titleSize*.038)}" stroke-linejoin="round" paint-order="stroke fill"`)}
+    ${rows.map((t,i)=>text(left,h*(twoRows?.83:.943)+i*h*.105,t,subSize,`${FONT} font-weight="600" fill="#252525"`)).join('')}
   </svg>`;
 }
 
@@ -116,37 +118,44 @@ function frontArtwork(config,x,y,w,h) {
 }
 
 function bearingSeal(x,y,size) {
-  const cx=x+size/2,cy=y+size/2;
-  let out=`<g fill="none" stroke="#171717" stroke-width="${n(size*.05)}"><circle cx="${n(cx)}" cy="${n(cy)}" r="${n(size*.395)}"/><circle cx="${n(cx)}" cy="${n(cy)}" r="${n(size*.195)}"/>`;
+  // Closely follows the thick-cage, eight-roller emblem of the source artwork.
+  const cx=x+size/2,cy=y+size/2,r=size*.435;
+  let out='<g fill="none" stroke="#171717" stroke-width="'+n(size*.074)+'">';
+  out+='<circle cx="'+n(cx)+'" cy="'+n(cy)+'" r="'+n(r)+'"/>';
+  out+='<circle cx="'+n(cx)+'" cy="'+n(cy)+'" r="'+n(size*.248)+'" stroke-width="'+n(size*.095)+'"/>';
   for(let i=0;i<8;i++) {
     const a=i*Math.PI/4;
-    out+=`<circle cx="${n(cx+size*.29*Math.cos(a))}" cy="${n(cy+size*.29*Math.sin(a))}" r="${n(size*.047)}" fill="#171717" stroke="none"/>`;
+    const px=cx+size*.322*Math.cos(a),py=cy+size*.322*Math.sin(a);
+    out+='<circle cx="'+n(px)+'" cy="'+n(py)+'" r="'+n(size*.085)+'" stroke="none" fill="#171717"/>';
   }
   return out+'</g>';
 }
 
 // Wide cartons reflow brand elements instead of uniformly downscaling a square graphic.
-function backArtwork(config,x,y,w,h){
-  if (getLayoutProfile(w,h)!=='wide') {
+function backArtwork(config,x,y,w,h) {
+  if(getLayoutProfile(w,h)!=='wide'){
     const {width,height}=ASSETS['back-panel'];
     const bw=Math.min(w*.88,h*.86*width/height), bh=bw*height/width;
     return `<use href="#back-panel" x="${n(x+(w-bw)/2)}" y="${n(y+(h-bh)/2)}" width="${n(bw)}" height="${n(bh)}"/>`;
   }
-  const size=h*.315, markW=Math.min(w*.43,h*1.9), spacing=h*.11;
-  const markX=(w-size-markW-spacing)/2, markY=h*.13;
-  const title='CORROSION-RESISTANT', desc='BEARINGS & MOTION COMPONENTS';
+  const size=h*.38, markW=Math.min(w*.45,h*2.03), spacing=h*.13;
+  const markX=(w-size-markW-spacing)/2,markY=h*.108;
+  const title='CORROSION-RESISTANT',desc='BEARINGS & MOTION COMPONENTS';
+  const titleSize=fitFont(title,h*.185,w*.81,.55);
+  const subSize=fitFont(desc,h*.110,w*.81,.54);
   return `<svg x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" viewBox="0 0 ${n(w)} ${n(h)}" overflow="hidden" data-layout="wide-back">
-    <rect x="${n(w*.067)}" y="${n(h*.045)}" width="${n(w*.866)}" height="${n(h*.91)}" rx="${n(h*.05)}" fill="none" stroke="#171717" stroke-width="${n(h*.0095)}"/>
+    <rect x="${n(w*.063)}" y="${n(h*.036)}" width="${n(w*.874)}" height="${n(h*.926)}" rx="${n(h*.038)}"
+      fill="none" stroke="#101010" stroke-width="${n(h*.025)}"/>
     ${bearingSeal(markX,markY,size)}
-    ${logo(markX+size+spacing,markY+size*.12,markW,{color:'#151515'})}
-    ${rule(w*.29,h*.49,w*.71,h*.0055)}
-    ${text(w*.5,h*.619,title,fitFont(title,h*.138,w*.80,.57),`${FONT} font-weight="700" text-anchor="middle" fill="#141414"`)}
-    ${text(w*.5,h*.713,desc,fitFont(desc,h*.087,w*.80,.53),`${FONT} font-weight="400" text-anchor="middle" fill="#242424"`)}
-    ${rule(w*.15,h*.784,w*.295,h*.005)}
-    ${rule(w*.705,h*.784,w*.85,h*.005)}
-    ${text(w*.5,h*.800,'www.linoxbearing.com',fitFont('www.linoxbearing.com',h*.075,w*.38,.51),`${FONT} font-weight="500" text-anchor="middle" fill="#202020"`)}
-    ${text(w*.5,h*.87,'ISO9001:2015',fitFont('ISO9001:2015',h*.073,w*.62,.53),`${FONT} font-weight="500" text-anchor="middle" fill="#252525"`)}
-    ${text(w*.5,h*.933,'MADE IN CHINA',fitFont('MADE IN CHINA',h*.067,w*.60,.53),`${FONT} font-weight="500" text-anchor="middle" fill="#252525"`)}
+    ${logo(markX+size+spacing,markY+size*.12,markW,{color:'#101010'})}
+    ${rule(w*.30,h*.477,w*.70,h*.011)}
+    ${text(w*.5,h*.622,title,titleSize,`font-family="Arial Black",Arial,Helvetica,sans-serif font-weight="900" text-anchor="middle" fill="#101010" stroke="#101010" stroke-width="${n(titleSize*.027)}" paint-order="stroke fill" stroke-linejoin="round"`)}
+    ${text(w*.5,h*.727,desc,subSize,'font-family="Arial",Helvetica,sans-serif font-weight="700" text-anchor="middle" fill="#171717"')}
+    ${rule(w*.15,h*.790,w*.30,h*.01)}
+    ${rule(w*.70,h*.790,w*.85,h*.01)}
+    ${text(w*.5,h*.813,'www.linoxbearing.com',h*.091,'font-family="Arial",Helvetica,sans-serif font-weight="700" text-anchor="middle" fill="#171717"')}
+    ${text(w*.5,h*.875,'ISO9001:2015',h*.083,'font-family="Arial",Helvetica,sans-serif font-weight="700" text-anchor="middle" fill="#171717"')}
+    ${text(w*.5,h*.93,'MADE IN CHINA',h*.074,'font-family="Arial",Helvetica,sans-serif font-weight="700" text-anchor="middle" fill="#171717"')}
   </svg>`;
 }
 
