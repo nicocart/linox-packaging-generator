@@ -30,9 +30,11 @@
           <option value="radial">Radial Spherical / 向心关节轴承</option>
           <option value="deep">Deep Groove / 深沟球轴承</option>
         </select>
-        <label for="font">印刷字体 <span>PRINT FONT</span></label>
-        <select name="font" id="font"></select>
-        <div class="formula-help" id="font-help">字体随文件内嵌，导出后在任何电脑上显示一致。</div>
+        <label for="model-font">型号字体 <span>MODEL FONT</span></label>
+        <select name="modelFont" id="model-font"></select>
+        <label for="category-font">分类字体 <span>CATEGORY FONT</span></label>
+        <select name="categoryFont" id="category-font"></select>
+        <div class="formula-help" id="font-help">型号与分类可分别设置；导出会内嵌两种字体。</div>
         <label>尺寸输入方式</label>
         <div class="toggle-row" role="radiogroup" aria-label="尺寸输入方式">
           <label class="radio-option"><input type="radio" name="mode" value="box" checked/><span>纸盒尺寸</span></label>

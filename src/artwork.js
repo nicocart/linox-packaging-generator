@@ -1,6 +1,6 @@
 import { createDieline, CATEGORY, normalizeInput } from './geometry.js';
 import { ASSETS } from './assets.js';
-import { fontAttrs, fontFaceEmbedCss, fontFaceUrlCss, textWidth, capHeight, fitSize } from './fonts.js';
+import { fontAttrs, fontFaceEmbedCssFor, fontFaceUrlCssFor, textWidth, capHeight, fitSize } from './fonts.js';
 
 /** SVG is entirely procedural. No AI/image assets or external font/network dependencies. */
 const esc = value => String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&apos;');
@@ -16,12 +16,12 @@ const text = (x,y,str,fs,other='') => `<text x="${n(x)}" y="${n(y)}" font-size="
  */
 const symbol=(id,{width,height,href})=>`<symbol id="${id}" viewBox="0 0 ${width} ${height}"><image href="${href}" width="${width}" height="${height}"/></symbol>`;
 /**
- * Shared <defs>: the chosen print font (embedded for exported files, loaded by
- * URL for the live page), the category drawing and the back-panel block.
+ * Shared <defs>: every print font the config uses (embedded for exported files,
+ * loaded by URL for the live page), the category drawing and the back panel.
  */
 export function artDefs(config,{embedFonts=true}={}) {
   const key=CATEGORY[config.category].illustration;
-  const fontCss=embedFonts?fontFaceEmbedCss(config.font):fontFaceUrlCss(config.font);
+  const fontCss=embedFonts?fontFaceEmbedCssFor(config):fontFaceUrlCssFor(config);
   return `<defs><style>${fontCss}</style>${symbol(`pic-${key}`,ASSETS[key])}${symbol('back-panel',ASSETS['back-panel'])}
 <filter id="metalTone" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".74 0 0 0 .02  0 .76 0 0 .02  0 0 .79 0 .03  0 0 0 1 0"/></filter></defs>`;
 }
@@ -111,17 +111,22 @@ function precisionWatermark(w,h,side='front'){
  */
 // × C; subPitch × subCap. Long cartons carry a larger logo (the established
 // SI15C look); square ones are width-limited, so their logo stays in step with the text.
-const STACK={ logoHWide:1.5, logoHSquare:1.22, gapLogo:.62, gapModel:.5, subCap:.6, subPitch:1.5 };
+const STACK={ logoHWide:1.5, logoHSquare:1.22, gapModel:.5, subCap:.6, subPitch:1.5 };
+// Short rule under the front wordmark: half the wordmark width, with breathing
+// room above and below so the model never feels glued to the logo.
+const RULE={ widthRatio:.5, gapBefore:.34, gapAfter:.42, thickness:.055 };
 function frontArtwork(config,x,y,w,h){
-  const f=config.font, rows=labelLines(CATEGORY[config.category].label);
+  const modelFont=config.modelFont ?? config.font;
+  const categoryFont=config.categoryFont ?? modelFont;
+  const rows=labelLines(CATEGORY[config.category].label);
   const profile=getLayoutProfile(w,h), wide=w/h>=1.6;
   const pad=Math.min(w,h)*.08, gap=Math.min(w,h)*.05;
   // Width of each element per unit C.
-  const capPer=role=>capHeight(f,role,1);
-  const modelWPer=textWidth(config.model,f,'heavy',1)/capPer('heavy');
+  const modelWPer=textWidth(config.model,modelFont,'heavy',1)/capHeight(modelFont,'heavy',1);
   // Category line width per unit of its own cap height.
-  const subWPerCap=Math.max(...rows.map(r=>textWidth(r,f,'medium',1)))/capPer('medium');
-  const subStack=STACK.gapLogo+1+STACK.gapModel+STACK.subCap*(1+(rows.length-1)*STACK.subPitch);
+  const subWPerCap=Math.max(...rows.map(r=>textWidth(r,categoryFont,'medium',1)))/capHeight(categoryFont,'medium',1);
+  const logoToModel=RULE.gapBefore+RULE.thickness+RULE.gapAfter;
+  const subStack=logoToModel+1+STACK.gapModel+STACK.subCap*(1+(rows.length-1)*STACK.subPitch);
   // Column widths: wide panels keep logo and text in the left ~55%; square
   // panels let the logo span the top and keep text in the left ~60%.
   const textCol=w*(wide?.55:.6)-pad;
@@ -143,10 +148,12 @@ function frontArtwork(config,x,y,w,h){
   const logoW=logoHt/LOGO_RATIO, logoBottom=top+logoHt;
   // Category shares the model column, so the drawing keeps its space on narrow panels.
   const subCap=Math.min(STACK.subCap*C,textCol/subWPerCap);
-  const modelBase=logoBottom+STACK.gapLogo*C+C;
-  const subFs=subCap/capPer('medium'), subBase=modelBase+STACK.gapModel*C+subCap;
-  const modelFs=C/capPer('heavy');
+  const modelBase=logoBottom+logoToModel*C+C;
+  const subFs=subCap/capHeight(categoryFont,'medium',1), subBase=modelBase+STACK.gapModel*C+subCap;
+  const modelFs=C/capHeight(modelFont,'heavy',1);
   const textRight=left+Math.max(modelWPer*C,subWPerCap*subCap);
+  const ruleW=logoW*RULE.widthRatio, ruleY=logoBottom+RULE.gapBefore*C;
+  const ruleStroke=Math.max(.1,C*RULE.thickness);
   // Product drawing in the free area, aligned right; centred vertically in it.
   const art=ASSETS[CATEGORY[config.category].illustration];
   const ax0=Math.max(textRight+gap,wide?left+logoW*(1+REG_EXTRA)+gap:0), ax1=w-pad*.6;
@@ -156,9 +163,10 @@ function frontArtwork(config,x,y,w,h){
   return `<svg x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" viewBox="0 0 ${n(w)} ${n(h)}" overflow="hidden" data-layout="${profile}" data-template="si15c-master">
     ${precisionWatermark(w,h)}
     ${productPic(config.category,ax1-aw,ay0+(ay1-ay0-ah)/2,aw,ah)}
-    ${logo(left,top,logoW,{font:f})}
-    ${text(left,modelBase,config.model,modelFs,`${fontAttrs(f,'heavy')} fill="#151515" data-role="model"`)}
-    ${rows.map((t,i)=>text(left,subBase+i*STACK.subPitch*subCap,t,subFs,`${fontAttrs(f,'medium')} fill="#292929" data-role="category"`)).join('')}
+    ${logo(left,top,logoW,{font:modelFont})}
+    ${line(left,ruleY,left+ruleW,ruleY,`stroke="#1a1a1a" stroke-width="${n(ruleStroke)}" data-role="front-rule" data-rule-width="${n(ruleW)}"`)}
+    ${text(left,modelBase,config.model,modelFs,`${fontAttrs(modelFont,'heavy')} fill="#151515" data-role="model"`)}
+    ${rows.map((t,i)=>text(left,subBase+i*STACK.subPitch*subCap,t,subFs,`${fontAttrs(categoryFont,'medium')} fill="#292929" data-role="category"`)).join('')}
   </svg>`;
 }
 
@@ -179,15 +187,16 @@ function backArtwork(config,x,y,w,h){
  * the logo toward the right edge, as on the reference cartons.
  */
 function sideArtwork(config,x,y,w,h){
-  const f=config.font, tall=h>=w;
+  const f=config.modelFont ?? config.font, tall=h>=w;
   const len=tall?h:w, across=tall?w:h;           // along / across the reading direction
   const pad=Math.min(len,across)*.1;
-  // Logo (with ®) takes up to 72% of the length; its height is capped so the
-  // logo and model lines together fit across the panel.
+  // The wordmark leads the eye but should not dominate the narrow side panel:
+  // it takes just over half the length, with the model set smaller beneath it.
   const ratio=LOGO_RATIO/(1+REG_EXTRA);           // logo height per unit total length
-  const modelPer=.82;                             // model cap height / logo height
-  const gapPer=.42;                               // line gap / logo height
-  const lh=Math.min(len*.72*ratio,(across-2*pad)/(1+gapPer+modelPer));
+  const lengthShare=.58;                          // logo width (with ®) / panel length
+  const modelPer=.7;                              // model cap height / logo height
+  const gapPer=.55;                               // line gap / logo height
+  const lh=Math.min(len*lengthShare*ratio,(across-2*pad)/(1+gapPer+modelPer));
   const logoW=lh/LOGO_RATIO, total=logoW*(1+REG_EXTRA);
   const modelFs=fitSize(config.model,f,'heavy',lh*modelPer/capHeight(f,'heavy',1),total);
   const block=lh+gapPer*lh+capHeight(f,'heavy',modelFs);

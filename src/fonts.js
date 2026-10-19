@@ -61,6 +61,21 @@ export function fontFaceEmbedCss(key) {
     `@font-face{font-family:'${familyName(key)}';font-weight:${weight};src:url(data:font/woff2;base64,${embedded.get(file)}) format('woff2')}`).join('');
 }
 
+/** All distinct families a normalized config renders with. */
+export function fontKeysFor(config) {
+  return [...new Set([config.font, config.modelFont, config.categoryFont].filter(Boolean))];
+}
+
+/** @font-face rules for every family in a config, embedded or URL-based. */
+export const fontFaceEmbedCssFor = config => fontKeysFor(config).map(fontFaceEmbedCss).join('');
+export const fontFaceUrlCssFor = (config, baseUrl = './assets/fonts/') =>
+  fontKeysFor(config).map(key => fontFaceUrlCss(key, baseUrl)).join('');
+
+/** Browser: fetch every family's woff2 files once so exports can embed them. */
+export async function loadFontDataFor(config, baseUrl = './assets/fonts/') {
+  await Promise.all(fontKeysFor(config).map(key => loadFontData(key, baseUrl)));
+}
+
 /** Browser: fetch the family's woff2 files once so exports can embed them. */
 export async function loadFontData(key, baseUrl = './assets/fonts/') {
   await Promise.all(files(key).filter(({ file }) => !embedded.has(file)).map(async ({ weight, file }) => {

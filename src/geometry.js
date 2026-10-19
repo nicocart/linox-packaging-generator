@@ -29,13 +29,18 @@ export function normalizeInput(input) {
   const dims = [input.length, input.width, input.depth].map(Number);
   const allowance = Number(input.allowance ?? 2);
   if (!model || model.length > 40 || /[<>\n\r]/.test(model)) throw new Error('型号应为 1–40 个有效字符');
-  if (!CATEGORY[category]) throw new Error('请选择支持的产品分类');
+  if (!Object.hasOwn(CATEGORY, category)) throw new Error('请选择支持的产品分类');
   if (!dims.every(v => isValidNumber(v) && v >= 8 && v <= 600)) throw new Error('长宽高必须在 8–600 mm 之间');
   if (!Number.isFinite(allowance) || allowance < 0 || allowance > 30) throw new Error('余量必须在 0–30 mm 之间');
-  const font = input.font ?? DEFAULT_FONT;
-  if (!FONTS[font]) throw new Error('请选择支持的印刷字体');
+  // `font` is the legacy single-font key and also drives annotations. Model and
+  // category can have their own family; both default to the legacy/default font.
+  const modelFont = input.modelFont ?? input.font ?? DEFAULT_FONT;
+  const categoryFont = input.categoryFont ?? input.font ?? DEFAULT_FONT;
+  const font = input.font ?? modelFont;
+  for (const key of [font, modelFont, categoryFont])
+    if (!Object.hasOwn(FONTS, key)) throw new Error('请选择支持的印刷字体');
   const sizes = input.mode === 'product' ? dims.map(v => v + allowance) : dims;
-  return { model, category, length: round(sizes[0]), width: round(sizes[1]), depth: round(sizes[2]), mode: input.mode === 'product' ? 'product' : 'box', allowance, font };
+  return { model, category, length: round(sizes[0]), width: round(sizes[1]), depth: round(sizes[2]), mode: input.mode === 'product' ? 'product' : 'box', allowance, font, modelFont, categoryFont };
 }
 
 /**

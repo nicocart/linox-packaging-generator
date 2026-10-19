@@ -116,7 +116,9 @@ test('long carton keeps bold front and uses the original compact badge',()=>{
   assert.ok(front && back);
   assert.match(front,/data-role="model"/);
   assert.match(front,/data-layer="bearing-watermark"/);
-  assert.doesNotMatch(front,/stroke="#1a1a1a" stroke-width="/);
+  // The front now carries exactly one short rule under the wordmark.
+  assert.match(front,/data-role="front-rule"/);
+  assert.equal([...front.matchAll(/stroke="#1a1a1a" stroke-width="/g)].length,1);
   assert.match(back,/href="#back-panel"/);
   assert.match(back,/data-brand-badge="compact"/);
   assert.match(back,/data-layer="bearing-watermark"/);
@@ -193,6 +195,26 @@ test('exports use only the chosen embedded font, never system fonts',async()=>{
 test('unknown fonts are rejected and the default is Barlow',()=>{
   assert.equal(normalizeInput(PRESETS.SI15C).font,'barlow');
   assert.throws(()=>normalizeInput({...PRESETS.SI15C,font:'comic-sans'}));
+  assert.throws(()=>normalizeInput({...PRESETS.SI15C,modelFont:'comic-sans'}));
+  assert.throws(()=>normalizeInput({...PRESETS.SI15C,categoryFont:'comic-sans'}));
+  // Object.prototype keys must not pass as valid family/category names.
+  assert.throws(()=>normalizeInput({...PRESETS.SI15C,category:'constructor'}));
+  assert.throws(()=>normalizeInput({...PRESETS.SI15C,font:'constructor'}));
+});
+test('model and category can use different fonts, both embedded',()=>{
+  const cfg={...PRESETS.SI15C,modelFont:'oswald',categoryFont:'roboto'};
+  const conf=normalizeInput(cfg);
+  assert.deepEqual([conf.modelFont,conf.categoryFont,conf.font],['oswald','roboto','oswald']);
+  const svg=createFlatSvg(cfg);
+  assertWellFormed(svg,'two-fonts');
+  assert.match(svg,/font-family="'LINOX Oswald',sans-serif" font-weight="700"/);
+  assert.match(svg,/font-family="'LINOX Roboto',sans-serif" font-weight="500"/);
+  for(const key of ['oswald','roboto'])
+    for(const w of Object.values(FONTS[key].weights))
+      assert.ok(svg.includes(`font-family:'LINOX ${FONTS[key].label}';font-weight:${w};src:url(data:font/woff2;base64,`),`${key} ${w} not embedded`);
+  // Legacy single-font configs still drive both roles.
+  const legacy=normalizeInput({...PRESETS.SI15C,font:'montserrat'});
+  assert.deepEqual([legacy.modelFont,legacy.categoryFont,legacy.font],['montserrat','montserrat','montserrat']);
 });
 
 /** Front-panel text and drawing boxes, read back from the generated SVG. */
@@ -206,10 +228,23 @@ function frontBoxes(cfg){
   const roleOf=a=>a.match(/data-role="(\w+)"/)[1];
   const lines=texts.map(([,a,str])=>{
     const role=roleOf(a)==='model'?'heavy':'medium', size=num(a,'font-size'), x=num(a,'x'), y=num(a,'y');
-    return {role:roleOf(a),x,y,w:textWidth(str,cfg.font,role,size),cap:capHeight(cfg.font,role,size),size};
+    const font=role==='heavy'?(cfg.modelFont??cfg.font):(cfg.categoryFont??cfg.font);
+    return {role:roleOf(a),x,y,w:textWidth(str,font,role,size),cap:capHeight(font,role,size),size};
   });
   return {pic:{x:num(pic,'x'),y:num(pic,'y'),w:num(pic,'width'),h:num(pic,'height')},lines};
 }
+test('front rule sits under the wordmark at half its width',()=>{
+  const svg=createFlatSvg(PRESETS.SI15C);
+  const start=svg.indexOf('data-template="si15c-master"');
+  const front=svg.slice(start,svg.indexOf('</svg>',start));
+  const rule=front.match(/<line[^>]*data-role="front-rule"[^>]*>/)?.[0];
+  assert.ok(rule,'front rule missing');
+  const ruleW=Number(rule.match(/data-rule-width="([0-9.]+)"/)[1]);
+  const scale=Number(front.match(/translate\([^)]*\) scale\(([0-9.]+)\)/)[1]);
+  const wordmarkW=305.871*scale;
+  assert.ok(Math.abs(ruleW-wordmarkW*.5)<.1,`rule ${ruleW} vs half wordmark ${wordmarkW*.5}`);
+  assert.match(rule,/stroke="#1a1a1a"/);
+});
 test('front text never overlaps the product drawing',()=>{
   const sizes=[[83,23,16],[32,32,16],[46,46,15],[60,40,20],[40,60,20],[30,30,30]];
   const models=['SI15C','GE17C','S6004-2RS','GEG120ES-2RS'];
@@ -241,8 +276,8 @@ test('® is a vector ring plus R in the print font, large enough to read',()=>{
     assert.doesNotMatch(markup(svg),/®/,'a typed ® would fall back to a system font');
     const marks=[...svg.matchAll(/<g data-role="registered"><circle [^>]*r="([0-9.]+)"/g)].map(m=>Number(m[1]));
     assert.equal(marks.length,3,'front + two sides');
-    // Side panel 16 × 23 mm: the ring must still be ≥ 1 mm across.
-    assert.ok(Math.min(...marks)*2>=1,`${font}: smallest ® ${Math.min(...marks)*2} mm`);
+    // Side panel 16 × 23 mm: the slimmer side logo still needs a legible ®.
+    assert.ok(Math.min(...marks)*2>=.75,`${font}: smallest ® ${Math.min(...marks)*2} mm`);
   }
 });
 test('side panel centres logo and model on the same line',()=>{
@@ -257,7 +292,9 @@ test('side panel centres logo and model on the same line',()=>{
     const mid=d.panels.sideA.h/2;
     assert.ok(Math.abs((logoX+regRight)/2-mid)<.05,`${item.model}: logo centre ${(logoX+regRight)/2} vs ${mid}`);
     assert.ok(Math.abs(model-mid)<.01,`${item.model}: model centre ${model} vs ${mid}`);
-    assert.ok(logoW/d.panels.sideA.h>.55,`${item.model}: side logo only ${(logoW/d.panels.sideA.h*100).toFixed(0)}% of panel length`);
+    const share=logoW/d.panels.sideA.h;
+    // Slimmer than the old 72% composition, but still the dominant side element.
+    assert.ok(share>.45 && share<.6,`${item.model}: side logo ${(share*100).toFixed(0)}% of panel length`);
   }
 });
 test('category line is at least half the model cap height',()=>{

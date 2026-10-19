@@ -84,7 +84,7 @@ function openCarton(config){
   const [faceOX,faceOY]=P(0,0,H);
   const markW=Math.min(L*.36,H*.42/.17), markH=markW*.17;
   const frontPrint=`<g data-open-box-print="true" transform="matrix(${v(ex[0])} ${v(ex[1])} 0 1 ${v(faceOX)} ${v(faceOY)})">
-    ${logo((L-markW)/2,(H-markH)/2,markW,{font:config.font})}
+    ${logo((L-markW)/2,(H-markH)/2,markW,{font:config.modelFont ?? config.font})}
   </g>`;
 
   const right=poly([P(L,0,0),P(L,D,0),P(L,D,H),P(L,0,H)],'fill="url(#wallSide)" stroke="#a5a6a9" stroke-width="1.2" stroke-linejoin="round"');
