@@ -1,11 +1,11 @@
 import { CATEGORY, PRESETS, normalizeInput, assessLayout } from './geometry.js';
-import { createFlatSvg, createViewsSvg, createIsoSvg } from './artwork.js';
+import { createFlatSvg } from './artwork.js';
 import { createPresentationSvg } from './presentation.js';
 
 const $=id=>document.getElementById(id);
 const form=$('params');
 const fields=['model','category','length','width','depth','allowance'];
-let activeTab='flat', pending=null;
+let pending=null;
 
 function currentRaw() {
   return Object.fromEntries([...fields.map(x=>[x,form.elements.namedItem(x).value]),['mode',form.elements.namedItem('mode').value]]);
@@ -21,18 +21,15 @@ function updateSizing() {
   $('allowance-wrap').hidden=mode!=='product';
   $('formula-help').textContent=mode==='product'?'每个方向加的是合计余量，例如 81 × 21 × 14 加 2 mm 得到 83 × 23 × 16。':'输入纸盒名义外尺寸。展开图将以毫米计算。';
 }
-function createSvg(raw,tab) {
-  return tab==='flat'?createPresentationSvg(raw):tab==='iso'?createIsoSvg(raw):createViewsSvg(raw);
-}
 function render() {
   try {
     const raw=currentRaw(), conf=normalizeInput(raw);
-    const output=createSvg(raw,activeTab);
+    const output=createPresentationSvg(raw);
     $('drawing').innerHTML=output;
     $('summary-model').textContent=conf.model;
     $('summary-category').textContent=CATEGORY[conf.category].label;
     $('summary-dims').textContent=[conf.length,conf.width,conf.depth].join(' × ');
-    $('drawing-caption').textContent={views:'前 / 后 / 侧面',flat:'上方包装展示 · 下方刀模示意（导出为精确毫米）',iso:'闭合盒型投影'}[activeTab];
+    $('drawing-caption').textContent='上方正反侧面及开盒效果 · 下方完整刀模展开';
     const messages=assessLayout(raw);
     $('warnings').replaceChildren(...messages.map(msg=>{const li=document.createElement('li');li.textContent=msg;return li;}));
     $('drawing').classList.remove('invalid');
@@ -68,14 +65,8 @@ document.querySelectorAll('.preset').forEach(btn=>btn.addEventListener('click',(
 form.addEventListener('input',()=>{updateSizing();render();});
 form.addEventListener('change',()=>{updateSizing();render();});
 form.addEventListener('submit',e=>e.preventDefault());
-document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
-  activeTab=btn.dataset.tab;
-  document.querySelectorAll('.tab').forEach(b=>{b.classList.toggle('active',b===btn);b.setAttribute('aria-selected',String(b===btn));});
-  render();
-}));
 $('download-presentation').addEventListener('click',()=>safely(raw=>download(filename(raw,'presentation','svg'),createPresentationSvg(raw),'image/svg+xml;charset=utf-8')));
 $('download-flat').addEventListener('click',()=>safely(raw=>download(filename(raw,'dieline','svg'),createFlatSvg(raw),'image/svg+xml;charset=utf-8')));
-$('download-views').addEventListener('click',()=>safely(raw=>download(filename(raw,'views','svg'),createViewsSvg(raw),'image/svg+xml;charset=utf-8')));
 $('download-json').addEventListener('click',()=>safely(raw=>download(filename(raw,'config','json'),JSON.stringify({schema:1,...raw},null,2),'application/json;charset=utf-8')));
 $('print-pdf').addEventListener('click',()=>safely(raw=>{$('print-sheet').innerHTML=createFlatSvg(raw);window.print();}));
 $('load-json').addEventListener('click',()=>$('json-file').click());
