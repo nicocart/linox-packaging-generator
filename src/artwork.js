@@ -73,18 +73,19 @@ export function getLayoutProfile(width,height) {
 // The same fixed SVG image is reused for each category; only its placement changes.
 function wideFrontArtwork(config,x,y,w,h){
   const rows=labelLines(CATEGORY[config.category].label);
+  // No decorative horizontal rules: typography and whitespace separate
+  // the trademark, model and product class on elongated cartons.
   const left=w*.052;
-  const markWidth=Math.min(w*.465,h*2.16);
-  const titleSize=fitFont(config.model,h*.275,w*.49,.58);
+  const twoRows=rows.length>1;
+  const markWidth=Math.min(w*.53,h*2.62);
+  const titleSize=fitFont(config.model,h*(twoRows?.215:.238),w*.47,.56);
   const maxRow=Math.max(...rows.map(t=>t.length));
-  const subSize=Math.min(h*.128,w*.45/(maxRow*.53));
+  const subSize=Math.min(h*(twoRows?.091:.113),w*.45/(maxRow*.53));
   return `<svg x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" viewBox="0 0 ${n(w)} ${n(h)}" overflow="hidden" data-layout="wide">
     ${productPic(config.category,w*.570,-h*.073,w*.414,h*1.17)}
-    ${logo(left,h*.137,markWidth)}
-    ${rule(left,h*.49,w*.399,h*.0068)}
-    ${text(left,h*.753,config.model,titleSize,`${FONT} font-weight="700" fill="#151515"`)}
-    ${rule(left,h*.807,w*.389,h*.006)}
-    ${rows.map((t,i)=>text(left,h*(rows.length===1?.948:.864)+i*h*.103,t,subSize,`${FONT} fill="#1d1d1d"`)).join('')}
+    ${logo(left,h*.13,markWidth)}
+    ${text(left,h*(twoRows?.72:.755),config.model,titleSize,`${FONT} font-weight="700" fill="#151515"`)}
+    ${rows.map((t,i)=>text(left,h*(twoRows?.826:.934)+i*h*.108,t,subSize,`${FONT} fill="#242424"`)).join('')}
   </svg>`;
 }
 
@@ -131,18 +132,21 @@ function backArtwork(config,x,y,w,h){
     const bw=Math.min(w*.88,h*.86*width/height), bh=bw*height/width;
     return `<use href="#back-panel" x="${n(x+(w-bw)/2)}" y="${n(y+(h-bh)/2)}" width="${n(bw)}" height="${n(bh)}"/>`;
   }
-  const size=h*.335, markW=Math.min(w*.445,h*1.9), spacing=h*.11;
-  const markX=(w-size-markW-spacing)/2, markY=h*.14;
+  const size=h*.315, markW=Math.min(w*.43,h*1.9), spacing=h*.11;
+  const markX=(w-size-markW-spacing)/2, markY=h*.13;
   const title='CORROSION-RESISTANT', desc='BEARINGS & MOTION COMPONENTS';
   return `<svg x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" viewBox="0 0 ${n(w)} ${n(h)}" overflow="hidden" data-layout="wide-back">
-    <rect x="${n(w*.067)}" y="${n(h*.045)}" width="${n(w*.866)}" height="${n(h*.91)}" rx="${n(h*.042)}" fill="none" stroke="#171717" stroke-width="${n(h*.012)}"/>
+    <rect x="${n(w*.067)}" y="${n(h*.045)}" width="${n(w*.866)}" height="${n(h*.91)}" rx="${n(h*.05)}" fill="none" stroke="#171717" stroke-width="${n(h*.0095)}"/>
     ${bearingSeal(markX,markY,size)}
     ${logo(markX+size+spacing,markY+size*.12,markW,{color:'#151515'})}
-    ${rule(w*.23,h*.533,w*.77,h*.0078)}
-    ${text(w*.5,h*.669,title,fitFont(title,h*.151,w*.80,.57),`${FONT} font-weight="800" text-anchor="middle" fill="#141414"`)}
-    ${text(w*.5,h*.766,desc,fitFont(desc,h*.094,w*.80,.53),`${FONT} text-anchor="middle" fill="#141414"`)}
-    ${text(w*.5,h*.848,'www.linoxbearing.com',fitFont('www.linoxbearing.com',h*.08,w*.75,.51),`${FONT} text-anchor="middle" fill="#141414"`)}
-    ${text(w*.5,h*.929,'ISO9001:2015 · MADE IN CHINA',fitFont('ISO9001:2015 · MADE IN CHINA',h*.071,w*.76,.53),`${FONT} text-anchor="middle" fill="#141414"`)}
+    ${rule(w*.29,h*.49,w*.71,h*.0055)}
+    ${text(w*.5,h*.619,title,fitFont(title,h*.138,w*.80,.57),`${FONT} font-weight="700" text-anchor="middle" fill="#141414"`)}
+    ${text(w*.5,h*.713,desc,fitFont(desc,h*.087,w*.80,.53),`${FONT} font-weight="400" text-anchor="middle" fill="#242424"`)}
+    ${rule(w*.15,h*.784,w*.295,h*.005)}
+    ${rule(w*.705,h*.784,w*.85,h*.005)}
+    ${text(w*.5,h*.800,'www.linoxbearing.com',fitFont('www.linoxbearing.com',h*.075,w*.38,.51),`${FONT} font-weight="500" text-anchor="middle" fill="#202020"`)}
+    ${text(w*.5,h*.87,'ISO9001:2015',fitFont('ISO9001:2015',h*.073,w*.62,.53),`${FONT} font-weight="500" text-anchor="middle" fill="#252525"`)}
+    ${text(w*.5,h*.933,'MADE IN CHINA',fitFont('MADE IN CHINA',h*.067,w*.60,.53),`${FONT} font-weight="500" text-anchor="middle" fill="#252525"`)}
   </svg>`;
 }
 
