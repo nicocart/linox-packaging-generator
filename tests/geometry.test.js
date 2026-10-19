@@ -198,6 +198,9 @@ test('print uses the colourful presentation and centers it',()=>{
   assert.match(app,/print-pdf[\s\S]*createPresentationSvg/);
   assert.match(css,/print-color-adjust:exact/);
   assert.match(css,/#print-sheet\{display:flex!important;align-items:center;justify-content:center/);
+  // Nested face SVGs must keep their own clipping; a broad overflow rule made
+  // watermarks spill across the whole printed page.
+  assert.match(css,/#print-sheet svg svg,#drawing svg svg\{overflow:hidden!important\}/);
 });
 
 test('every downloadable SVG is well-formed XML for every preset',async()=>{
