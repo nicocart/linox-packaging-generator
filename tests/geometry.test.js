@@ -91,11 +91,11 @@ test('long carton keeps bold front and uses the original compact badge',()=>{
   const back=art.split('data-layout="wide-back"')[1]?.split('</svg>')[0];
   assert.ok(front && back);
   assert.match(front,/font-weight="900"/);
-  assert.match(front,/data-layer="diagonal-branding"/);
+  assert.match(front,/data-layer="bearing-watermark"/);
   assert.doesNotMatch(front,/stroke="#1a1a1a" stroke-width="/);
   assert.match(back,/href="#back-panel"/);
   assert.match(back,/data-brand-badge="compact"/);
-  assert.match(back,/data-layer="diagonal-branding"/);
+  assert.match(back,/data-layer="bearing-watermark"/);
   assert.doesNotMatch(back,/CORROSION-RESISTANT/);
   const bw=Number(back.match(/data-badge-width="([0-9.]+)"/)?.[1]);
   const bh=Number(back.match(/data-badge-height="([0-9.]+)"/)?.[1]);
@@ -108,7 +108,7 @@ test('decoration and open-box printing are present in presentation exports',asyn
   const {createPresentationSvg}=await import('../src/presentation.js');
   for(const config of [PRESETS.SI15C,PRESETS.GE17C,PRESETS['S6004-2RS']]){
     const out=createPresentationSvg(config);
-    assert.match(out,/data-layer="diagonal-branding"/);
+    assert.match(out,/data-layer="bearing-watermark"/);
     assert.match(out,/data-open-box-print="true"/);
     assert.match(out,/href="#back-panel"/);
     assert.doesNotMatch(markup(out),/NaN|undefined/);
@@ -120,4 +120,27 @@ test('square back labels still use their fixed original graphic',()=>{
     assert.match(art,/href="#back-panel"/);
     assert.doesNotMatch(art,/data-layout="wide-back"/);
   }
+});
+
+
+test('all categories share one SI15C-derived front and back layout',()=>{
+  for(const item of Object.values(PRESETS)){
+    const svg=createFlatSvg(item);
+    const names=[...svg.matchAll(/data-template="si15c-master"/g)];
+    assert.equal(names.length,2);
+    assert.match(svg,/font-weight="900"/);
+    assert.equal([...svg.matchAll(/data-layer="bearing-watermark"/g)].length,2);
+    assert.match(svg,/data-brand-badge="compact"/);
+    assert.doesNotMatch(svg,/data-layer="diagonal-branding"/);
+  }
+});
+test('the application displays one full preview, not alternate view tabs',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  const app=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
+  assert.match(html,/id="drawing"/);
+  assert.match(html,/下载|导出/);
+  assert.doesNotMatch(html,/data-tab=|class="tabs"/);
+  assert.doesNotMatch(app,/activeTab|createIsoSvg|createViewsSvg/);
+  assert.match(app,/const output=createPresentationSvg\(raw\)/);
 });
