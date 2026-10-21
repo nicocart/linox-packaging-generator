@@ -6,8 +6,8 @@ import { BEARING_CATALOG } from './bearing-catalog.js';
 const $=id=>document.getElementById(id);
 const catalogByModel=new Map(BEARING_CATALOG.map(entry=>[`${entry.category}:${entry.model}`,entry]));
 const CATEGORY_ORDER=['rod','radial','deep'];
-const BATCH_STORAGE_KEY='linox-packaging-batch:v2';
-const LEGACY_BATCH_STORAGE_KEY='linox-packaging-batch:v1';
+const BATCH_STORAGE_KEY='linox-packaging-batch:v3';
+const LEGACY_BATCH_STORAGE_KEYS=['linox-packaging-batch:v2','linox-packaging-batch:v1'];
 const LEGACY_OVERRIDES={
   SI15C:{category:'rod',length:80,width:20,depth:13},
   GE17C:{category:'radial',length:29,width:29,depth:13},
@@ -15,14 +15,17 @@ const LEGACY_OVERRIDES={
 };
 const batch={rows:[],items:[],activeId:null,nextId:1};
 
+function sameDims(row,dims){
+  return Number(row.length)===dims.length&&Number(row.width)===dims.width&&Number(row.depth)===dims.depth;
+}
 function migrateBatchRows(rows){
   return rows.map(row=>{
     if(!row||typeof row!=='object') return row;
+    const entry=BEARING_CATALOG.find(item=>item.category===row.category&&item.model===row.model);
+    if(entry?.legacy&&sameDims(row,entry.legacy)) return {...row,length:entry.length,width:entry.width,depth:entry.depth};
     const old=LEGACY_OVERRIDES[row.model];
-    if(!old||row.category!==old.category) return row;
-    if(Number(row.length)!==old.length||Number(row.width)!==old.width||Number(row.depth)!==old.depth) return row;
-    const entry=BEARING_CATALOG.find(item=>item.category===old.category&&item.model===row.model);
-    return entry?{...row,length:entry.length,width:entry.width,depth:entry.depth}:row;
+    if(entry&&old&&row.category===old.category&&sameDims(row,old)) return {...row,length:entry.length,width:entry.width,depth:entry.depth};
+    return row;
   });
 }
 function saveBatchRows(){
@@ -34,18 +37,21 @@ function saveBatchRows(){
 }
 function readBatchRows(){
   try{
-    let raw=localStorage.getItem(BATCH_STORAGE_KEY);
-    if(raw===null){
-      const legacy=localStorage.getItem(LEGACY_BATCH_STORAGE_KEY);
-      if(legacy===null) return null;
+    const raw=localStorage.getItem(BATCH_STORAGE_KEY);
+    if(raw!==null){
+      const data=JSON.parse(raw);
+      return Array.isArray(data)?data:null;
+    }
+    for(const key of LEGACY_BATCH_STORAGE_KEYS){
+      const legacy=localStorage.getItem(key);
+      if(legacy===null) continue;
       const data=JSON.parse(legacy);
-      if(!Array.isArray(data)) return null;
+      if(!Array.isArray(data)) continue;
       const migrated=migrateBatchRows(data);
       localStorage.setItem(BATCH_STORAGE_KEY,JSON.stringify(migrated));
       return migrated;
     }
-    const data=JSON.parse(raw);
-    return Array.isArray(data)?data:null;
+    return null;
   }catch{
     return null;
   }

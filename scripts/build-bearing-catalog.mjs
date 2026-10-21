@@ -30,15 +30,23 @@ const readCsv = name => {
   return rows.filter(cells => cells.some(Boolean)).map(cells =>
     Object.fromEntries(header.map((name, index) => [name, (cells[index] ?? '').trim()])));
 };
-const inchToMm = value => Number(value) * 25.4;
 
 const compact = value => String(value ?? '').replace(/\s+/g, '').toUpperCase();
-const round = value => Math.round(Number(value) * 100) / 100;
+const round = value => Math.round((Number(value) + 1e-9) * 100) / 100;
 const dimsOk = (l, w, h) => [l, w, h].every(value => Number.isFinite(value) && value >= 5 && value <= 597);
+const threadMajor = value => {
+  const match = String(value ?? '').match(/M\s*([0-9.]+)/i);
+  return match ? Number(match[1]) : null;
+};
+const optionalInch = value => {
+  const text = String(value ?? '').trim();
+  return text === '' ? null : Number(text) * 25.4;
+};
+const maxOf = values => Math.max(...values.filter(value => Number.isFinite(value)));
 
 const entries = [];
 const seen = new Set();
-const add = (category, source, l, w, h) => {
+const add = (category, source, l, w, h, legacy = null) => {
   const display = String(source.seoPrimaryDesignation ?? source.designation ?? '').trim();
   const model = compact(display);
   if (!model) return;
@@ -46,7 +54,7 @@ const add = (category, source, l, w, h) => {
   const key = `${category}:${model}`;
   if (seen.has(key)) return;
   seen.add(key);
-  entries.push({
+  const entry = {
     model,
     display,
     category,
@@ -55,21 +63,35 @@ const add = (category, source, l, w, h) => {
     width: round(w),
     depth: round(h),
     source: 'data',
-  });
+  };
+  if (legacy) entry.legacy = { length: round(legacy.length), width: round(legacy.width), depth: round(legacy.depth) };
+  entries.push(entry);
 };
 
 for (const item of read('rod-ends.json')) {
   if (item.data_status !== 'READY') continue;
-  // Rod ends: d2 is the head outside diameter, l2 the male overall length,
-  // l4 the female overall length, W the housing width (fall back to B).
-  add('rod', item, item.l2_mm ?? item.l4_mm, item.d2_mm, item.W_mm ?? item.B_mm);
+  // Width is the largest of thread major diameter, B and W; d2 remains the
+  // third dimension so the head diameter is still represented.
+  const length=item.l2_mm ?? item.l4_mm;
+  const width=maxOf([threadMajor(item.thread),item.B_mm,item.W_mm]);
+  add('rod', item, length, width, item.d2_mm, {
+    length,
+    width: item.d2_mm,
+    depth: item.W_mm ?? item.B_mm,
+  });
 }
 // PHSB/POSB are maintained in the inch-series CSV rather than the metric JSON.
 for (const row of readCsv('rod-ends/inch-series.csv')) {
+  const length=optionalInch(row['Overall Length L (in)']);
+  const ball=optionalInch(row['Ball Diameter d2 (in)']);
+  const b=optionalInch(row['Width B (in)']);
+  const width=maxOf([
+    optionalInch(row['Thread Major Diameter d3 (in)']),
+    b,
+    optionalInch(row['Shank Diameter S (in)']),
+  ]);
   add('rod', { designation: row.Model, series: 'PHSB / POSB (inch)' },
-    inchToMm(row['Overall Length L (in)']),
-    inchToMm(row['Ball Diameter d2 (in)']),
-    inchToMm(row['Width B (in)']));
+    length, width, ball, { length, width: ball, depth: b });
 }
 for (const item of read('spherical-plain-bearings.json')) {
   if (item.data_status !== 'READY') continue;
