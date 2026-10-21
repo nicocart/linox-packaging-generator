@@ -26,19 +26,19 @@ test('every catalog model has finite, unique dimensions', () => {
   }
 });
 
-test('existing packaging references keep their known product dimensions', () => {
+test('known models use the product model dimensions as the source of truth', () => {
   const byModel = Object.fromEntries(BEARING_CATALOG.map(entry => [entry.model, entry]));
   assert.deepEqual(
     [byModel.SI15C.length, byModel.SI15C.width, byModel.SI15C.depth, byModel.SI15C.source],
-    [80, 20, 13, 'override'],
+    [81, 40, 21, 'data'],
   );
   assert.deepEqual(
     [byModel.GE17C.length, byModel.GE17C.width, byModel.GE17C.depth, byModel.GE17C.source],
-    [29, 29, 13, 'override'],
+    [30, 30, 14, 'data'],
   );
   assert.deepEqual(
     [byModel['S6004-2RS'].length, byModel['S6004-2RS'].width, byModel['S6004-2RS'].depth, byModel['S6004-2RS'].source],
-    [43, 43, 12, 'override'],
+    [42, 42, 12, 'data'],
   );
 });
 

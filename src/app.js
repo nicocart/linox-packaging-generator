@@ -6,9 +6,25 @@ import { BEARING_CATALOG } from './bearing-catalog.js';
 const $=id=>document.getElementById(id);
 const catalogByModel=new Map(BEARING_CATALOG.map(entry=>[`${entry.category}:${entry.model}`,entry]));
 const CATEGORY_ORDER=['rod','radial','deep'];
-const BATCH_STORAGE_KEY='linox-packaging-batch:v1';
+const BATCH_STORAGE_KEY='linox-packaging-batch:v2';
+const LEGACY_BATCH_STORAGE_KEY='linox-packaging-batch:v1';
+const LEGACY_OVERRIDES={
+  SI15C:{category:'rod',length:80,width:20,depth:13},
+  GE17C:{category:'radial',length:29,width:29,depth:13},
+  'S6004-2RS':{category:'deep',length:43,width:43,depth:12},
+};
 const batch={rows:[],items:[],activeId:null,nextId:1};
 
+function migrateBatchRows(rows){
+  return rows.map(row=>{
+    if(!row||typeof row!=='object') return row;
+    const old=LEGACY_OVERRIDES[row.model];
+    if(!old||row.category!==old.category) return row;
+    if(Number(row.length)!==old.length||Number(row.width)!==old.width||Number(row.depth)!==old.depth) return row;
+    const entry=BEARING_CATALOG.find(item=>item.category===old.category&&item.model===row.model);
+    return entry?{...row,length:entry.length,width:entry.width,depth:entry.depth}:row;
+  });
+}
 function saveBatchRows(){
   try{
     localStorage.setItem(BATCH_STORAGE_KEY,JSON.stringify(batch.rows.map(row=>batchRaw(row))));
@@ -18,8 +34,16 @@ function saveBatchRows(){
 }
 function readBatchRows(){
   try{
-    const raw=localStorage.getItem(BATCH_STORAGE_KEY);
-    if(raw===null) return null;
+    let raw=localStorage.getItem(BATCH_STORAGE_KEY);
+    if(raw===null){
+      const legacy=localStorage.getItem(LEGACY_BATCH_STORAGE_KEY);
+      if(legacy===null) return null;
+      const data=JSON.parse(legacy);
+      if(!Array.isArray(data)) return null;
+      const migrated=migrateBatchRows(data);
+      localStorage.setItem(BATCH_STORAGE_KEY,JSON.stringify(migrated));
+      return migrated;
+    }
     const data=JSON.parse(raw);
     return Array.isArray(data)?data:null;
   }catch{
@@ -258,9 +282,10 @@ $('batch-export').addEventListener('click',printBatch);
 initBatchCatalog();
 const savedBatch=readBatchRows();
 if(savedBatch===null){
-  addBatchRow({model:'SI15C',category:'rod',length:80,width:20,depth:13,allowance:3});
-  addBatchRow({model:'GE17C',category:'radial',length:29,width:29,depth:13,allowance:3});
-  addBatchRow({model:'S6004-2RS',category:'deep',length:43,width:43,depth:12,allowance:3});
+  for(const model of ['SI15C','GE17C','S6004-2RS']){
+    const entry=BEARING_CATALOG.find(item=>item.model===model);
+    if(entry) addBatchRow({model:entry.model,category:entry.category,length:entry.length,width:entry.width,depth:entry.depth,allowance:3});
+  }
 }else{
   const rows=savedBatch.filter(row=>row&&typeof row==='object');
   rows.forEach(row=>addBatchRow(row));
