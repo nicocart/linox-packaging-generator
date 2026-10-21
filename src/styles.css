@@ -91,3 +91,8 @@
   #print-sheet.batch-print .print-page:last-child{page-break-after:auto;break-after:auto}
   #print-sheet.batch-print .print-page>svg{display:block;width:auto!important;height:auto!important;max-width:100%;max-height:100%;margin:0;overflow:visible}
 }
+.app-shell{display:block;min-height:100vh}
+.workspace{width:100%}
+.workspace-body{max-width:1560px}
+.preview-hint{font-size:11px;color:#8a919d}
+@media(max-width:800px){.preview-footer{gap:8px}.preview-hint{width:100%}}

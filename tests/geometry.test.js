@@ -195,13 +195,15 @@ test('the application displays one full preview, not alternate view tabs',async(
   const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
   const app=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
   assert.match(html,/id="drawing"/);
-  assert.match(html,/id="quantity"/);
   assert.match(html,/id="batch-rows"/);
   assert.match(html,/id="batch-add"/);
   assert.match(html,/id="batch-catalog"/);
   assert.match(html,/id="batch-export"/);
-  assert.match(html,/id="batch-export-svg"/);
-  assert.match(html,/下载|导出/);
+  assert.match(html,/导出/);
+  assert.doesNotMatch(html,/id="batch-export-svg"/);
+  assert.doesNotMatch(html,/id="download-presentation"/);
+  assert.doesNotMatch(html,/id="download-flat"/);
+  assert.doesNotMatch(html,/class="sidebar"/);
   assert.doesNotMatch(html,/data-tab=|class="tabs"/);
   assert.doesNotMatch(app,/activeTab|createIsoSvg|createViewsSvg/);
   assert.match(app,/const output=createPresentationSvg\(raw[,)]/);
@@ -210,7 +212,7 @@ test('interface copy is Chinese-first, without bilingual micro labels',()=>{
   const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
   for(const label of ['MODEL / SKU','CATEGORY','PRINT FONT','LIVE PREVIEW','SVG VECTOR PREVIEW','WORKFLOW','BRAND SYSTEM','PRODUCT PARAMETERS','PACKAGING ENGINEERING','LOCAL PROCESSING','Reverse Tuck End','Packaging Studio'])
     assert.ok(!html.includes(label),`UI still contains ${label}`);
-  for(const label of ['产品参数','产品分类','型号','印刷字体','生产工具','实时预览','品牌规范'])
+  for(const label of ['批量生成','从型号库添加','一次生成多个包装','实时预览','包装全景预览','生产工具','包装清单'])
     assert.ok(html.includes(label),`UI missing ${label}`);
 });
 test('background watermark is visible and inset on wide faces',()=>{
@@ -230,7 +232,7 @@ test('background watermark is visible and inset on wide faces',()=>{
 test('print uses the colourful presentation and centers it',()=>{
   const app=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
   const css=readFileSync(new URL('../src/styles.css',import.meta.url),'utf8');
-  assert.match(app,/print-pdf[\s\S]*createPresentationSvg/);
+  assert.match(app,/printBatch[\s\S]*createPresentationSvg/);
   assert.match(app,/createBatchIndexSvgs/);
   assert.match(app,/BATCH_STORAGE_KEY/);
   assert.match(app,/readBatchRows/);
