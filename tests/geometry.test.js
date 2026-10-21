@@ -50,6 +50,12 @@ test('quantity defaults to 1 and must be a positive integer',()=>{
   assert.throws(()=>normalizeInput({...PRESETS.SI15C,quantity:1.5}));
   assert.throws(()=>normalizeInput({...PRESETS.SI15C,quantity:1000000}));
 });
+test('small product dimensions are valid when the final carton is at least 8 mm',()=>{
+  const small={model:'PHSB3',category:'rod',mode:'product',length:35.05,width:15.88,depth:7.92,allowance:3,quantity:1};
+  const conf=normalizeInput(small);
+  assert.deepEqual([conf.length,conf.width,conf.depth],[38.05,18.88,10.92]);
+  assert.throws(()=>normalizeInput({...small,allowance:0}));
+});
 test('SVG exports contain cut/fold groups and mm units',()=>{
   const svg=createFlatSvg(PRESETS.GE17C);
   assert.match(svg,/id="cut"/); assert.match(svg,/id="crease"/);

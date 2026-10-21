@@ -31,7 +31,9 @@ export function normalizeInput(input) {
   const quantity = Number(input.quantity ?? 1);
   if (!model || model.length > 40 || /[<>\n\r]/.test(model)) throw new Error('型号应为 1–40 个有效字符');
   if (!Object.hasOwn(CATEGORY, category)) throw new Error('请选择支持的产品分类');
-  if (!dims.every(v => isValidNumber(v) && v >= 8 && v <= 600)) throw new Error('长宽高必须在 8–600 mm 之间');
+  const isProduct = input.mode === 'product';
+  const minInput = isProduct ? 5 : 8;
+  if (!dims.every(v => isValidNumber(v) && v >= minInput && v <= 600)) throw new Error(isProduct ? '产品尺寸必须在 5–600 mm 之间' : '长宽高必须在 8–600 mm 之间');
   if (!Number.isFinite(allowance) || allowance < 0 || allowance > 30) throw new Error('余量必须在 0–30 mm 之间');
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 999999) throw new Error('数量必须是 1–999999 的整数');
   // Brand typography is fixed: model and annotations use Barlow Semi Condensed,
@@ -40,8 +42,9 @@ export function normalizeInput(input) {
   const font = MODEL_FONT;
   const modelFont = MODEL_FONT;
   const categoryFont = CATEGORY_FONT;
-  const sizes = input.mode === 'product' ? dims.map(v => v + allowance) : dims;
-  return { model, category, length: round(sizes[0]), width: round(sizes[1]), depth: round(sizes[2]), mode: input.mode === 'product' ? 'product' : 'box', allowance, quantity, font, modelFont, categoryFont };
+  const sizes = isProduct ? dims.map(v => v + allowance) : dims;
+  if (!sizes.every(v => v >= 8 && v <= 600)) throw new Error('成品尺寸必须在 8–600 mm 之间');
+  return { model, category, length: round(sizes[0]), width: round(sizes[1]), depth: round(sizes[2]), mode: isProduct ? 'product' : 'box', allowance, quantity, font, modelFont, categoryFont };
 }
 
 /**

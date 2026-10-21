@@ -11,7 +11,7 @@
 
 ## 核心功能
 
-- 型号库：从 614 个杆端 / 向心 / 深沟型号中选择，自动填充分类、长宽高；型号字段仍可手改，旧型号不存在时可选择相同尺寸的型号后改名。
+- 型号库：从 632 个杆端 / 向心 / 深沟型号中选择，自动填充分类、长宽高；型号字段仍可手改，旧型号不存在时可选择相同尺寸的型号后改名。
 - 类型 SVG 线稿：Rod End、Radial Spherical Plain Bearing、Deep Groove Ball Bearing，每个类别固定，型号变更仅更新文字。
 - 批量行按“产品尺寸 + 余量（默认 3 mm）”计算；数量默认 1 件，每行可改。
 - 自动生成参考稿效果展示板（正面/背面/侧面 + 开盒 + 刀模）；所有面、开盒和刀模均按真实长宽高比例绘制。
@@ -35,12 +35,13 @@
 
 ## 型号库
 
-`src/bearing-catalog.js` 由 `scripts/build-bearing-catalog.mjs` 从 `linox-astro/src/data/product-models` 生成，只保留三个包装分类：
+`src/bearing-catalog.js` 由 `scripts/build-bearing-catalog.mjs` 从 `linox-astro/src/data/product-models` 和 `src/data/products/rod-ends/inch-series.csv` 生成，只保留三个包装分类：
 
 - 杆端关节轴承：`d2_mm`（头部外径）、`l2_mm` / `l4_mm`（公/母杆总长）、`W_mm`（宽度，缺失时用 `B_mm`）；
+- PHSB / POSB 英寸系列：从 `rod-ends/inch-series.csv` 读取 `Overall Length L`、`Ball Diameter d2`、`Width B`，按 ×25.4 换算为毫米；
 - 向心关节轴承与深沟球轴承：`D_mm × D_mm × B_mm`。
 
-型号库目前收录 614 个尺寸完整的型号。现有 `SI15C`、`GE17C`、`S6004-2RS` 保留当前已校核的产品尺寸作为 override；其余型号按上述产品外形尺寸填充，批量默认再加 3 mm 余量形成纸盒尺寸。数据变化后运行：
+型号库目前收录 632 个尺寸完整的型号（含 PHSB/POSB 英寸系列，已换算为毫米）。现有 `SI15C`、`GE17C`、`S6004-2RS` 保留当前已校核的产品尺寸作为 override；其余型号按上述产品外形尺寸填充，批量默认再加 3 mm 余量形成纸盒尺寸。数据变化后运行：
 
 ```bash
 npm run catalog -- ../linox-astro

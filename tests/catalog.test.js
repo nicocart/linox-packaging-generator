@@ -8,8 +8,8 @@ const counts = BEARING_CATALOG.reduce((all, entry) => {
 }, {});
 
 test('bearing catalog contains the three packaging categories', () => {
-  assert.equal(BEARING_CATALOG.length, 614);
-  assert.deepEqual(counts, { rod: 186, radial: 142, deep: 286 });
+  assert.equal(BEARING_CATALOG.length, 632);
+  assert.deepEqual(counts, { rod: 204, radial: 142, deep: 286 });
 });
 
 test('every catalog model has finite, unique dimensions', () => {
@@ -47,4 +47,11 @@ test('rod-end catalog uses head diameter, overall length and housing width', () 
   assert.deepEqual([sa15c.length, sa15c.width, sa15c.depth], [83, 40, 12]);
   const si5e = BEARING_CATALOG.find(entry => entry.model === 'SI5E');
   assert.deepEqual([si5e.length, si5e.width, si5e.depth], [40.5, 21, 10]);
+});
+
+test('PHSB/POSB inch series is converted to millimetres', () => {
+  const phsb3 = BEARING_CATALOG.find(entry => entry.model === 'PHSB3');
+  assert.deepEqual([phsb3.length, phsb3.width, phsb3.depth], [35.05, 15.88, 7.92]);
+  const posb16 = BEARING_CATALOG.find(entry => entry.model === 'POSB16');
+  assert.deepEqual([posb16.length, posb16.width, posb16.depth], [139.7, 69.85, 34.92]);
 });

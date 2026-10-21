@@ -158,7 +158,7 @@ function addBatchRow(initial={},focus=false){
   const category=document.createElement('select');
   category.append(...Object.entries(CATEGORY).map(([key,{description}])=>new Option(description,key)));
   category.value=initial.category??'rod';
-  const numberInput=(value,placeholder,min=8,max=600)=>{
+  const numberInput=(value,placeholder,min=5,max=600)=>{
     const input=document.createElement('input');
     input.type='number';input.min=String(min);input.max=String(max);input.step='0.1';input.placeholder=placeholder;
     if(value!==undefined) input.value=value;
