@@ -72,6 +72,11 @@
               <button type="button" class="accent-btn" id="batch-export">↓ 批量导出 PDF</button>
             </div>
           </div>
+          <div class="batch-library">
+            <label for="batch-catalog">从型号库添加</label>
+            <select id="batch-catalog"><option value="">选择型号，自动填充分类与尺寸…</option></select>
+            <span>选择后新增一行；型号、分类和尺寸仍可修改</span>
+          </div>
           <div class="batch-rows" id="batch-rows"></div>
           <div class="batch-empty" id="batch-empty" hidden>还没有数据行，点击“新增一行”。</div>
           <div class="batch-meta"><span id="batch-status">正在读取…</span><span>分类可直接选择；长宽高单位为 mm</span></div>

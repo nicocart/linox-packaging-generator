@@ -181,6 +181,7 @@ test('the application displays one full preview, not alternate view tabs',async(
   assert.match(html,/id="quantity"/);
   assert.match(html,/id="batch-rows"/);
   assert.match(html,/id="batch-add"/);
+  assert.match(html,/id="batch-catalog"/);
   assert.match(html,/id="batch-export"/);
   assert.match(html,/id="batch-export-svg"/);
   assert.match(html,/下载|导出/);

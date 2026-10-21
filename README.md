@@ -20,18 +20,34 @@
 - 排版按字体真实字宽计算（`src/font-metrics.js`），正面的型号与分类分别按各自字体测量，正面文字不会与产品图重叠。同一长宽比的面板共用一套比例化字阶：LOGO、型号、分类随面板尺寸缩放；超长型号优先在连字符处换行，避免把整块文字缩小。如需更换固定字体：修改 `src/fonts.js` 的 `MODEL_FONT` / `CATEGORY_FONT`，并确保对应 woff2 与 `scripts/measure-fonts.html` 生成的字宽数据齐全。
 - 分组 `<g id="cut">` 红色裁切、`<g id="crease">` 青色压痕、`<g id="print">` 印刷。浏览器打印按钮把彩色效果展示图居中输出为 A3 横向页面，可另存为 PDF。
 - 导出 SVG、导入/导出 JSON 配置；浏览器本地自动保存输入数据。
-- 批量生成：每行直接输入型号、选择分类、输入长宽高和余量（默认 3 mm，可按行修改）；点击任一行可载入单件全景预览；**批量导出 PDF** 一页一个包装，另可导出 SVG 压缩包供生产编辑。
+- 批量生成：每行直接输入型号、选择分类、输入长宽高和余量（默认 3 mm，可按行修改）；也可从内置型号库选择轴承自动填充分类与尺寸；点击任一行可载入单件全景预览；**批量导出 PDF** 一页一个包装，另可导出 SVG 压缩包供生产编辑。
 - 包含 Node 内置测试：`npm test`（无需安装 NPM 依赖）。
 
 ## 批量生成
 
 - 每行包含：型号输入框、分类下拉框、长/宽/高数字输入、余量输入（默认 3 mm）、数量（默认 1）；
+- “从型号库添加”按杆端、向心、深沟三组列出型号；选中后新增一行（或填入当前空行），自动写入分类和产品尺寸，型号仍可编辑；
 - 默认按“产品尺寸 + 余量”计算，可逐行修改余量与数量；
 - 点“新增一行”追加空行，点“删除”移除该行；空行会被忽略；
 - 无效行会在行内提示错误，不阻塞其他有效行；
 - 点击行内“预览”会把该行载入下方单件全景预览；
 - **批量导出 PDF** 会把每个有效项排成 A3 横向一页，打开打印面板后选择“另存为 PDF”即可得到多页 PDF；每页顶部会标注数量；
 - “导出 SVG 压缩包”会生成 `效果图/`、`刀模/` 和 `清单.csv`，用于继续编辑或生产交接，内容全部在浏览器本地生成。
+
+## 型号库
+
+`src/bearing-catalog.js` 由 `scripts/build-bearing-catalog.mjs` 从 `linox-astro/src/data/product-models` 生成，只保留三个包装分类：
+
+- 杆端关节轴承：`d2_mm`（头部外径）、`l2_mm` / `l4_mm`（公/母杆总长）、`W_mm`（宽度，缺失时用 `B_mm`）；
+- 向心关节轴承与深沟球轴承：`D_mm × D_mm × B_mm`。
+
+型号库目前收录 614 个尺寸完整的型号。现有 `SI15C`、`GE17C`、`S6004-2RS` 保留当前已校核的产品尺寸作为 override；其余型号按上述产品外形尺寸填充，批量默认再加 3 mm 余量形成纸盒尺寸。数据变化后运行：
+
+```bash
+npm run catalog -- ../linox-astro
+```
+
+型号库只负责“快速填充”，所有字段仍可手动修改；如果某个型号不在库中，可选择尺寸相同的型号填入后，再把型号名字改掉，尺寸不会被重置。
 
 ## 重要限制：正式生产前必须打样
 
@@ -54,15 +70,18 @@ src/
   zip.js       # dependency-free ZIP writer for batch downloads
   geometry.js  # mm-based flat dieline cut/fold geometry + validators
   artwork.js   # print artwork (front/back/side layouts) and elevations
+  bearing-catalog.js # generated: 3-category bearing model/dimension catalog
   assets.js        # generated: product images + back-panel block as data URIs
   fonts.js         # print font registry, @font-face (embedded / URL), text measuring
   font-metrics.js  # per-font glyph widths and cap heights
 assets/            # source PNGs (run `npm run assets` after replacing)
 scripts/build-assets.mjs
+scripts/build-bearing-catalog.mjs
   presentation.js  # reference-style presentation board
   styles.css   # desktop/mobile interface and print layout
 tests/
   geometry.test.js
+  catalog.test.js
   zip.test.js
 .github/workflows/test.yml
 ```

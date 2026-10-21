@@ -3,12 +3,46 @@ import { createFlatSvg } from './artwork.js';
 import { createPresentationSvg } from './presentation.js';
 import { loadFontDataFor } from './fonts.js';
 import { createZipBlob } from './zip.js';
+import { BEARING_CATALOG } from './bearing-catalog.js';
 
 const $=id=>document.getElementById(id);
 const form=$('params');
 const fields=['model','category','length','width','depth','quantity','allowance'];
+const catalogByModel=new Map(BEARING_CATALOG.map(entry=>[`${entry.category}:${entry.model}`,entry]));
+const CATEGORY_ORDER=['rod','radial','deep'];
 let pending=null;
 const batch={rows:[],items:[],activeId:null,nextId:1};
+
+function initBatchCatalog(){
+  const select=$('batch-catalog');
+  for(const category of CATEGORY_ORDER){
+    const entries=BEARING_CATALOG.filter(entry=>entry.category===category);
+    if(!entries.length) continue;
+    const group=document.createElement('optgroup');
+    group.label=CATEGORY[category].description;
+    for(const entry of entries){
+      group.append(new Option(entry.display,`${entry.category}:${entry.model}`));
+    }
+    select.append(group);
+  }
+  select.addEventListener('change',()=>{
+    const entry=catalogByModel.get(select.value);
+    if(!entry) return;
+    const blank=batch.rows.find(row=>!row.model.value.trim()&&!row.length.value.trim()&&!row.width.value.trim()&&!row.depth.value.trim());
+    if(blank){
+      blank.model.value=entry.model;
+      blank.category.value=entry.category;
+      blank.length.value=entry.length;
+      blank.width.value=entry.width;
+      blank.depth.value=entry.depth;
+      blank.model.focus();
+      refreshBatch();
+    }else{
+      addBatchRow({model:entry.model,category:entry.category,length:entry.length,width:entry.width,depth:entry.depth},true);
+    }
+    select.value='';
+  });
+}
 
 function currentRaw() {
   return Object.fromEntries([...fields.map(x=>[x,form.elements.namedItem(x).value]),['mode',form.elements.namedItem('mode').value]]);
@@ -313,6 +347,7 @@ $('json-file').addEventListener('change',async e=>{
   e.target.value='';
 });
 try{const saved=JSON.parse(localStorage.getItem('linox-packaging-studio:v1')||'null');if(saved){normalizeInput(saved);setRaw(saved);}else render();}catch{render();}
+initBatchCatalog();
 addBatchRow({model:'SI15C',category:'rod',length:80,width:20,depth:13,allowance:3});
 addBatchRow({model:'GE17C',category:'radial',length:29,width:29,depth:13,allowance:3});
 addBatchRow({model:'S6004-2RS',category:'deep',length:43,width:43,depth:12,allowance:3});
