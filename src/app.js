@@ -1,6 +1,6 @@
 import { CATEGORY, PRESETS, normalizeInput, assessLayout } from './geometry.js';
 import { createFlatSvg } from './artwork.js';
-import { createPresentationSvg } from './presentation.js';
+import { createPresentationSvg, createBatchIndexSvgs } from './presentation.js';
 import { loadFontDataFor } from './fonts.js';
 import { createZipBlob } from './zip.js';
 import { BEARING_CATALOG } from './bearing-catalog.js';
@@ -10,8 +10,27 @@ const form=$('params');
 const fields=['model','category','length','width','depth','quantity','allowance'];
 const catalogByModel=new Map(BEARING_CATALOG.map(entry=>[`${entry.category}:${entry.model}`,entry]));
 const CATEGORY_ORDER=['rod','radial','deep'];
+const BATCH_STORAGE_KEY='linox-packaging-batch:v1';
 let pending=null;
 const batch={rows:[],items:[],activeId:null,nextId:1};
+
+function saveBatchRows(){
+  try{
+    localStorage.setItem(BATCH_STORAGE_KEY,JSON.stringify(batch.rows.map(row=>batchRaw(row))));
+  }catch{
+    // Storage can be unavailable in private or restricted contexts.
+  }
+}
+function readBatchRows(){
+  try{
+    const raw=localStorage.getItem(BATCH_STORAGE_KEY);
+    if(raw===null) return null;
+    const data=JSON.parse(raw);
+    return Array.isArray(data)?data:null;
+  }catch{
+    return null;
+  }
+}
 
 function initBatchCatalog(){
   const select=$('batch-catalog');
@@ -167,6 +186,7 @@ function refreshBatch(){
   $('batch-status').textContent=parts.length?parts.join(' · '):'还没有可用的数据行';
   $('batch-export').disabled=batch.items.length===0;
   $('batch-empty').hidden=batch.rows.length>0;
+  saveBatchRows();
 }
 function addBatchRow(initial={},focus=false){
   const id=batch.nextId++;
@@ -250,9 +270,11 @@ async function printBatch(){
     sheet.className='batch-print';
     document.documentElement.classList.add('batch-print');
     document.body.classList.add('batch-print');
-    sheet.innerHTML=batch.items.map(item=>`<section class="print-page">${createPresentationSvg(item.raw)}</section>`).join('');
+    const indexPages=createBatchIndexSvgs(batch.items.map(item=>item.raw));
+    const itemPages=batch.items.map(item=>`<section class="print-page">${createPresentationSvg(item.raw)}</section>`);
+    sheet.innerHTML=[...indexPages.map(svg=>`<section class="print-page">${svg}</section>`),...itemPages].join('');
     const skipped=batch.rows.filter(row=>row.error).length;
-    $('batch-status').textContent=`已准备 ${batch.items.length} 页${skipped?`，跳过 ${skipped} 行`:''}，请在打印窗口选择“另存为 PDF”`;
+    $('batch-status').textContent=`已准备 ${indexPages.length+itemPages.length} 页（含 ${indexPages.length} 页清单）${skipped?`，跳过 ${skipped} 行`:''}，请在打印窗口选择“另存为 PDF”`;
     await document.fonts.ready;
     await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
     const previousTitle=document.title;
@@ -260,8 +282,6 @@ async function printBatch(){
     window.print();
     setTimeout(()=>{
       document.title=previousTitle;
-      document.documentElement.classList.remove('batch-print');
-      document.body.classList.remove('batch-print');
     },1000);
   }catch(error){
     $('batch-status').textContent=`PDF 准备失败：${error.message}`;
@@ -348,6 +368,13 @@ $('json-file').addEventListener('change',async e=>{
 });
 try{const saved=JSON.parse(localStorage.getItem('linox-packaging-studio:v1')||'null');if(saved){normalizeInput(saved);setRaw(saved);}else render();}catch{render();}
 initBatchCatalog();
-addBatchRow({model:'SI15C',category:'rod',length:80,width:20,depth:13,allowance:3});
-addBatchRow({model:'GE17C',category:'radial',length:29,width:29,depth:13,allowance:3});
-addBatchRow({model:'S6004-2RS',category:'deep',length:43,width:43,depth:12,allowance:3});
+const savedBatch=readBatchRows();
+if(savedBatch===null){
+  addBatchRow({model:'SI15C',category:'rod',length:80,width:20,depth:13,allowance:3});
+  addBatchRow({model:'GE17C',category:'radial',length:29,width:29,depth:13,allowance:3});
+  addBatchRow({model:'S6004-2RS',category:'deep',length:43,width:43,depth:12,allowance:3});
+}else{
+  const rows=savedBatch.filter(row=>row&&typeof row==='object');
+  rows.forEach(row=>addBatchRow(row));
+  refreshBatch();
+}

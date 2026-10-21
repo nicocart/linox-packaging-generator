@@ -76,7 +76,24 @@ test('presentation board renders every preset without invalid numbers',async()=>
 test('quantity is printed on the presentation and PDF page',async()=>{
   const {createPresentationSvg}=await import('../src/presentation.js');
   const svg=createPresentationSvg({...PRESETS.SI15C,quantity:42});
-  assert.match(svg,/数量：42/);
+  assert.match(svg,/数量 42/);
+  assert.match(svg,/fill="#e60012"/);
+});
+test('batch index page lists models, dimensions and quantities',async()=>{
+  const {createBatchIndexSvgs}=await import('../src/presentation.js');
+  const pages=createBatchIndexSvgs([
+    {...PRESETS.SI15C,quantity:12},
+    {...PRESETS.GE17C,quantity:8},
+  ],{embedFonts:false});
+  assert.equal(pages.length,1);
+  const page=pages[0];
+  assert.match(page,/包装清单/);
+  assert.match(page,/包装款数/);
+  assert.match(page,/总数量/);
+  assert.match(page,/SI15C/);
+  assert.match(page,/GE17C/);
+  assert.match(page,/数量/);
+  assert.doesNotMatch(markup(page),/NaN|undefined/);
 });
 test('dieline flaps and glue tab are closed cut outlines',()=>{
   const d=createDieline(PRESETS.SI15C);
@@ -214,6 +231,9 @@ test('print uses the colourful presentation and centers it',()=>{
   const app=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
   const css=readFileSync(new URL('../src/styles.css',import.meta.url),'utf8');
   assert.match(app,/print-pdf[\s\S]*createPresentationSvg/);
+  assert.match(app,/createBatchIndexSvgs/);
+  assert.match(app,/BATCH_STORAGE_KEY/);
+  assert.match(app,/readBatchRows/);
   assert.match(app,/batch-print/);
   assert.match(css,/print-color-adjust:exact/);
   assert.match(css,/#print-sheet\{display:flex!important;align-items:center;justify-content:center/);
