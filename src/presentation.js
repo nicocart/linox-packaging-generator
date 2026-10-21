@@ -1,4 +1,4 @@
-import { CATEGORY, normalizeInput } from './geometry.js';
+import { normalizeInput } from './geometry.js';
 import { artDefs, createFlatSvg, logo, productArtworkForPreview, previewFaceArtwork } from './artwork.js';
 import { CATEGORY_FONT, MODEL_FONT, fontAttrs, fontFaceEmbedCssFor, textWidth } from './fonts.js';
 
@@ -14,15 +14,21 @@ const esc=s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll
 let labelFont='barlow';
 const label=(x,y,s,{size=20,color='#2a2a2a',anchor='middle',extra=''}={})=>`<text x="${v(x)}" y="${v(y)}" fill="${color}" ${fontAttrs(labelFont,'regular')} font-size="${size}" text-anchor="${anchor}" ${extra}>${esc(s)}</text>`;
 function quantityBadge(c){
-  const size=28;
-  const text=`数量 ${c.quantity}`;
-  const padX=18,padY=12;
-  const boxW=textWidth(text,labelFont,'regular',size)+padX*2;
-  const boxH=size+padY*2;
+  const number=String(c.quantity),label='数量',unit='件';
+  const labelSize=11,numberSize=34,unitSize=13;
+  const numberW=textWidth(number,labelFont,'regular',numberSize);
+  const unitW=textWidth(unit,labelFont,'regular',unitSize);
+  const labelW=textWidth(label,labelFont,'regular',labelSize);
+  const padX=16,bar=4;
+  const boxW=Math.max(labelW,numberW+5+unitW)+padX*2+bar;
+  const boxH=72;
   const x=PAGE_W-28-boxW,y=18;
   return `<g>
-  <rect x="${v(x)}" y="${v(y)}" width="${v(boxW)}" height="${v(boxH)}" rx="9" fill="#e60012"/>
-  <text x="${v(x+boxW-padX)}" y="${v(y+boxH/2+size*.35)}" fill="#fff" ${fontAttrs(labelFont,'regular')} font-size="${size}" font-weight="600" text-anchor="end">${esc(text)}</text>
+  <rect x="${v(x)}" y="${v(y)}" width="${v(boxW)}" height="${v(boxH)}" rx="7" fill="#fff" stroke="#e2ddd7" stroke-width="1"/>
+  <rect x="${v(x)}" y="${v(y)}" width="${bar}" height="${v(boxH)}" rx="2" fill="#e60012"/>
+  <text x="${v(x+padX+bar)}" y="${v(y+25)}" fill="#8a8a84" ${fontAttrs(labelFont,'regular')} font-size="${labelSize}" letter-spacing=".08em">${label}</text>
+  <text x="${v(x+padX+bar)}" y="${v(y+60)}" fill="#e60012" ${fontAttrs(labelFont,'regular')} font-size="${numberSize}" font-weight="600">${number}</text>
+  <text x="${v(x+padX+bar+numberW+5)}" y="${v(y+60)}" fill="#6f6f68" ${fontAttrs(labelFont,'regular')} font-size="${unitSize}">${unit}</text>
   </g>`;
 }
 
@@ -166,14 +172,12 @@ export function createBatchIndexSvgs(rawItems,{embedFonts=true}={}){
   const configs=rawItems.map(normalizeInput);
   if(!configs.length) return [];
   const totalQuantity=configs.reduce((sum,item)=>sum+item.quantity,0);
-  const categoryCount=new Set(configs.map(item=>item.category)).size;
   const pageCount=Math.ceil(configs.length/INDEX_PER_PAGE);
   const date=new Date().toLocaleDateString('zh-CN');
   const fontCss=embedFonts?fontFaceEmbedCssFor(configs[0]):'';
   const cards=[
     {label:'包装款数',value:String(configs.length),color:'#252a31'},
     {label:'总数量',value:String(totalQuantity),color:'#e60012'},
-    {label:'覆盖分类',value:String(categoryCount),color:'#252a31'},
   ];
   return Array.from({length:pageCount},(_,pageIndex)=>{
     const start=pageIndex*INDEX_PER_PAGE;
@@ -188,16 +192,16 @@ export function createBatchIndexSvgs(rawItems,{embedFonts=true}={}){
       <line x1="64" y1="${y+8}" x2="1384" y2="${y+8}" stroke="#ecece8" stroke-width="1"/>
       <text x="92" y="${y}" fill="#8a8a84" ${fontAttrs(MODEL_FONT,'regular')} font-size="14">${index+1}</text>
       <text x="172" y="${y}" fill="#252a31" ${fontAttrs(MODEL_FONT,'regular')} font-size="16" font-weight="600">${esc(item.model)}</text>
-      <text x="520" y="${y}" fill="#4a4a44" ${fontAttrs(CATEGORY_FONT,'regular')} font-size="15">${esc(CATEGORY[item.category].description)}</text>
-      <text x="830" y="${y}" fill="#4a4a44" ${fontAttrs(MODEL_FONT,'regular')} font-size="15">${item.length} × ${item.width} × ${item.depth} mm</text>
-      <text x="1140" y="${y}" fill="#e60012" ${fontAttrs(MODEL_FONT,'regular')} font-size="19" font-weight="600">${item.quantity}</text>
+      <text x="560" y="${y}" fill="#4a4a44" ${fontAttrs(MODEL_FONT,'regular')} font-size="15">${item.length} × ${item.width} × ${item.depth} mm</text>
+      <text x="1080" y="${y}" fill="#e60012" ${fontAttrs(MODEL_FONT,'regular')} font-size="19" font-weight="600">${item.quantity}</text>
       <text x="1360" y="${y}" fill="#6f6f68" ${fontAttrs(MODEL_FONT,'regular')} font-size="14" text-anchor="end">第 ${page} 页</text>
       </g>`;
     }).join('');
     const cardSvg=cards.map((card,index)=>{
-      const x=64+index*445;
+      const cardW=652,gap=16;
+      const x=64+index*(cardW+gap);
       return `<g>
-      <rect x="${x}" y="184" width="429" height="92" rx="10" fill="#fff" stroke="#e2e2dd"/>
+      <rect x="${x}" y="184" width="${cardW}" height="92" rx="10" fill="#fff" stroke="#e2e2dd"/>
       <text x="${x+22}" y="214" fill="#8a8a84" ${fontAttrs(CATEGORY_FONT,'regular')} font-size="13">${card.label}</text>
       <text x="${x+22}" y="252" fill="${card.color}" ${fontAttrs(MODEL_FONT,'regular')} font-size="32" font-weight="600">${card.value}</text>
       </g>`;
@@ -216,9 +220,8 @@ export function createBatchIndexSvgs(rawItems,{embedFonts=true}={}){
     <rect x="64" y="362" width="1320" height="34" fill="#252a31"/>
     <text x="92" y="384" fill="#fff" ${fontAttrs(CATEGORY_FONT,'regular')} font-size="12">序号</text>
     <text x="172" y="384" fill="#fff" ${fontAttrs(CATEGORY_FONT,'regular')} font-size="12">型号</text>
-    <text x="520" y="384" fill="#fff" ${fontAttrs(CATEGORY_FONT,'regular')} font-size="12">分类</text>
-    <text x="830" y="384" fill="#fff" ${fontAttrs(CATEGORY_FONT,'regular')} font-size="12">成品尺寸</text>
-    <text x="1140" y="384" fill="#fff" ${fontAttrs(CATEGORY_FONT,'regular')} font-size="12">数量</text>
+    <text x="560" y="384" fill="#fff" ${fontAttrs(CATEGORY_FONT,'regular')} font-size="12">成品尺寸</text>
+    <text x="1080" y="384" fill="#fff" ${fontAttrs(CATEGORY_FONT,'regular')} font-size="12">数量</text>
     <text x="1360" y="384" fill="#fff" ${fontAttrs(CATEGORY_FONT,'regular')} font-size="12" text-anchor="end">PDF 页</text>
     ${rows}
     <line x1="64" y1="1044" x2="1384" y2="1044" stroke="#d8d8d2" stroke-width="1"/>

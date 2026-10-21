@@ -76,7 +76,8 @@ test('presentation board renders every preset without invalid numbers',async()=>
 test('quantity is printed on the presentation and PDF page',async()=>{
   const {createPresentationSvg}=await import('../src/presentation.js');
   const svg=createPresentationSvg({...PRESETS.SI15C,quantity:42});
-  assert.match(svg,/数量 42/);
+  assert.match(svg,/>数量<\/text>/);
+  assert.match(svg,/>42<\/text>/);
   assert.match(svg,/fill="#e60012"/);
 });
 test('batch index page lists models, dimensions and quantities',async()=>{
@@ -93,6 +94,7 @@ test('batch index page lists models, dimensions and quantities',async()=>{
   assert.match(page,/SI15C/);
   assert.match(page,/GE17C/);
   assert.match(page,/数量/);
+  assert.doesNotMatch(page,/分类/);
   assert.doesNotMatch(markup(page),/NaN|undefined/);
 });
 test('dieline flaps and glue tab are closed cut outlines',()=>{
