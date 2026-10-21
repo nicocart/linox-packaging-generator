@@ -54,17 +54,21 @@ const add = (category, source, l, w, h, legacy = null) => {
   const key = `${category}:${model}`;
   if (seen.has(key)) return;
   seen.add(key);
+  const raw = { length: round(l), width: round(w), depth: round(h) };
+  const sorted = [raw.length, raw.width, raw.depth].sort((a, b) => b - a);
   const entry = {
     model,
     display,
     category,
     series: source.series ?? '',
-    length: round(l),
-    width: round(w),
-    depth: round(h),
+    length: sorted[0],
+    width: sorted[1],
+    depth: sorted[2],
     source: 'data',
   };
   if (legacy) entry.legacy = { length: round(legacy.length), width: round(legacy.width), depth: round(legacy.depth) };
+  // Preserve the pre-sort values so rows saved by the previous build can migrate.
+  if (raw.length !== entry.length || raw.width !== entry.width || raw.depth !== entry.depth) entry.unsorted = raw;
   entries.push(entry);
 };
 

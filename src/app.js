@@ -6,8 +6,8 @@ import { BEARING_CATALOG } from './bearing-catalog.js';
 const $=id=>document.getElementById(id);
 const catalogByModel=new Map(BEARING_CATALOG.map(entry=>[`${entry.category}:${entry.model}`,entry]));
 const CATEGORY_ORDER=['rod','radial','deep'];
-const BATCH_STORAGE_KEY='linox-packaging-batch:v3';
-const LEGACY_BATCH_STORAGE_KEYS=['linox-packaging-batch:v2','linox-packaging-batch:v1'];
+const BATCH_STORAGE_KEY='linox-packaging-batch:v4';
+const LEGACY_BATCH_STORAGE_KEYS=['linox-packaging-batch:v3','linox-packaging-batch:v2','linox-packaging-batch:v1'];
 const LEGACY_OVERRIDES={
   SI15C:{category:'rod',length:80,width:20,depth:13},
   GE17C:{category:'radial',length:29,width:29,depth:13},
@@ -22,7 +22,8 @@ function migrateBatchRows(rows){
   return rows.map(row=>{
     if(!row||typeof row!=='object') return row;
     const entry=BEARING_CATALOG.find(item=>item.category===row.category&&item.model===row.model);
-    if(entry?.legacy&&sameDims(row,entry.legacy)) return {...row,length:entry.length,width:entry.width,depth:entry.depth};
+    const previous=entry?[entry.legacy,entry.unsorted].filter(Boolean):[];
+    if(entry&&previous.some(dims=>sameDims(row,dims))) return {...row,length:entry.length,width:entry.width,depth:entry.depth};
     const old=LEGACY_OVERRIDES[row.model];
     if(entry&&old&&row.category===old.category&&sameDims(row,old)) return {...row,length:entry.length,width:entry.width,depth:entry.depth};
     return row;

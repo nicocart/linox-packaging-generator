@@ -26,11 +26,18 @@ test('every catalog model has finite, unique dimensions', () => {
   }
 });
 
+test('every catalog model is ordered from largest to smallest dimension', () => {
+  for (const entry of BEARING_CATALOG) {
+    assert.ok(entry.length >= entry.width && entry.width >= entry.depth,
+      `${entry.model}: ${entry.length}×${entry.width}×${entry.depth}`);
+  }
+});
+
 test('known models use the product model dimensions as the source of truth', () => {
   const byModel = Object.fromEntries(BEARING_CATALOG.map(entry => [entry.model, entry]));
   assert.deepEqual(
     [byModel.SI15C.length, byModel.SI15C.width, byModel.SI15C.depth, byModel.SI15C.source],
-    [81, 21, 40, 'data'],
+    [81, 40, 21, 'data'],
   );
   assert.deepEqual(
     [byModel.GE17C.length, byModel.GE17C.width, byModel.GE17C.depth, byModel.GE17C.source],
@@ -44,14 +51,14 @@ test('known models use the product model dimensions as the source of truth', () 
 
 test('rod-end catalog uses head diameter, overall length and the widest section', () => {
   const sa15c = BEARING_CATALOG.find(entry => entry.model === 'SA15C');
-  assert.deepEqual([sa15c.length, sa15c.width, sa15c.depth], [83, 14, 40]);
+  assert.deepEqual([sa15c.length, sa15c.width, sa15c.depth], [83, 40, 14]);
   const si5e = BEARING_CATALOG.find(entry => entry.model === 'SI5E');
-  assert.deepEqual([si5e.length, si5e.width, si5e.depth], [40.5, 10, 21]);
+  assert.deepEqual([si5e.length, si5e.width, si5e.depth], [40.5, 21, 10]);
 });
 
 test('PHSB/POSB inch series is converted to millimetres', () => {
   const phsb3 = BEARING_CATALOG.find(entry => entry.model === 'PHSB3');
-  assert.deepEqual([phsb3.length, phsb3.width, phsb3.depth], [35.05, 7.92, 15.88]);
+  assert.deepEqual([phsb3.length, phsb3.width, phsb3.depth], [35.05, 15.88, 7.92]);
   const posb16 = BEARING_CATALOG.find(entry => entry.model === 'POSB16');
-  assert.deepEqual([posb16.length, posb16.width, posb16.depth], [139.7, 34.93, 69.85]);
+  assert.deepEqual([posb16.length, posb16.width, posb16.depth], [139.7, 69.85, 34.93]);
 });

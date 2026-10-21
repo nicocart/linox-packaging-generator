@@ -41,6 +41,8 @@
 - PHSB / POSB 英寸系列：从 `rod-ends/inch-series.csv` 读取 `Overall Length L`、`Ball Diameter d2`、`Width B`、`Shank Diameter S`、`Thread Major Diameter d3`，全部按 ×25.4 换算为毫米；POSB 的 `d3/S` 为空时宽度取 `B`。
 - 向心关节轴承与深沟球轴承：`D_mm × D_mm × B_mm`。
 
+所有型号填入批量行前，都会把三个尺寸按从大到小排序：**最大值作为长，中间值作为宽，最小值作为高**。
+
 型号库目前收录 632 个尺寸完整的型号（含 PHSB/POSB 英寸系列，已换算为毫米）。所有型号直接使用源数据中的产品尺寸，不再保留额外 override；批量默认再加 3 mm 余量形成纸盒尺寸。例如 GE17C 填入 30×30×14，加余量后为 33×33×17。数据变化后运行：
 
 ```bash
